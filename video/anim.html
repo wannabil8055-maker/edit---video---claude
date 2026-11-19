@@ -1,0 +1,756 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:"Baloo 2";font-weight:800;src:url(node_modules/@fontsource/baloo-2/files/baloo-2-latin-800-normal.woff2)}
+@font-face{font-family:"Baloo 2";font-weight:700;src:url(node_modules/@fontsource/baloo-2/files/baloo-2-latin-700-normal.woff2)}
+@font-face{font-family:"Poppins";font-weight:600;src:url(node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff2)}
+@font-face{font-family:"Poppins";font-weight:400;src:url(node_modules/@fontsource/poppins/files/poppins-latin-400-normal.woff2)}
+@font-face{font-family:"Amiri";font-weight:700;src:url(node_modules/@fontsource/amiri/files/amiri-arabic-700-normal.woff2)}
+@font-face{font-family:"Amiri";font-weight:400;src:url(node_modules/@fontsource/amiri/files/amiri-arabic-400-normal.woff2)}
+html,body{margin:0;background:#000}
+canvas{display:block}
+</style></head>
+<body><canvas id="cv" width="1080" height="1920"></canvas>
+<script>
+// ======================================================================
+//  "Satu Masjid Gelak" : 2D animation engine (deterministic: render(t))
+// ======================================================================
+const W = 1080, H = 1920, DUR = 55;
+const cv = document.getElementById('cv'), C = cv.getContext('2d');
+const off = document.createElement('canvas'); off.width = W; off.height = H;
+const OC = off.getContext('2d');
+
+// ---------- palette ----------
+const P = {
+  teal: '#0E3B43', emerald: '#1F7A6B', gold: '#E8B547', cream: '#F7EEDC',
+  coral: '#F28C6B', lav: '#6E5C8F', ink: '#12302F', deep: '#0A2A30'
+};
+const FB = '"Baloo 2", Amiri, "Noto Color Emoji", sans-serif';
+const FP = 'Poppins, Amiri, "Noto Color Emoji", sans-serif';
+const FA = 'Amiri, serif';
+const FE = '"Noto Color Emoji"';
+
+// ---------- math ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eio = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const eout = t => 1 - Math.pow(1 - t, 3);
+const ein = t => t * t * t;
+const back = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const pop = (t, a, d = .45) => back(seg(t, a, a + d));
+function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shade(hex, f) { // f<0 darker, f>0 lighter
+  const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = n >> 8 & 255, b = n & 255;
+  if (f < 0) { r *= 1 + f; g *= 1 + f; b *= 1 + f; } else { r += (255 - r) * f; g += (255 - g) * f; b += (255 - b) * f; }
+  return `rgb(${r | 0},${g | 0},${b | 0})`;
+}
+function rr(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+
+// ---------- text helpers ----------
+function txt(c, s, x, y, o = {}) {
+  c.save(); c.font = o.font; c.textAlign = o.align || 'center'; c.textBaseline = 'middle';
+  if (o.alpha != null) c.globalAlpha *= o.alpha;
+  if (o.shadow) { c.shadowColor = o.shadow; c.shadowBlur = o.blur ?? 24; c.shadowOffsetY = o.sy ?? 6; }
+  if (o.stroke) { c.lineJoin = 'round'; c.lineWidth = o.sw || 12; c.strokeStyle = o.stroke; c.strokeText(s, x, y); if (!o.keepShadow) c.shadowColor = 'transparent'; }
+  c.fillStyle = o.fill || '#fff'; c.fillText(s, x, y); c.restore();
+}
+// rich line: array of {s, fill, scale?, glow?}, centered at x
+function rich(c, segs, x, y, o) {
+  c.save(); c.font = o.font; c.textBaseline = 'middle'; c.textAlign = 'left';
+  const ws = segs.map(g => c.measureText(g.s).width), tot = ws.reduce((a, b) => a + b, 0);
+  let cx = x - tot / 2;
+  segs.forEach((g, i) => {
+    c.save(); const mx = cx + ws[i] / 2; c.translate(mx, y); const sc = g.scale || 1; c.scale(sc, sc); c.translate(-mx, -y);
+    if (o.alpha != null) c.globalAlpha *= o.alpha;
+    if (o.stroke) { c.lineJoin = 'round'; c.lineWidth = o.sw || 12; c.strokeStyle = o.stroke; c.strokeText(g.s, cx, y); }
+    if (g.glow) { c.shadowColor = g.glow; c.shadowBlur = 30; }
+    c.fillStyle = g.fill || o.fill || '#fff'; c.fillText(g.s, cx, y); c.restore();
+    cx += ws[i];
+  });
+  c.restore(); return tot;
+}
+// word-by-word reveal with wrapping. hl: {word: color}
+function words(c, text, x, y, maxW, lh, font, t, t0, dt, o = {}) {
+  c.save(); c.font = font; c.textBaseline = 'middle'; c.textAlign = 'left';
+  const ws = text.split(' '), sp = c.measureText(' ').width;
+  const lines = [[]]; let lw = 0;
+  ws.forEach(w => { const wd = c.measureText(w).width; if (lw + wd > maxW && lines[lines.length - 1].length) { lines.push([]); lw = 0; } lines[lines.length - 1].push({ w, wd }); lw += wd + sp; });
+  let k = 0;
+  lines.forEach((ln, li) => {
+    const tw = ln.reduce((a, b) => a + b.wd, 0) + sp * (ln.length - 1);
+    let cx = o.align === 'left' ? x : x - tw / 2; const cy = y + li * lh;
+    ln.forEach(({ w, wd }) => {
+      const p = eout(seg(t, t0 + k * dt, t0 + k * dt + .35));
+      if (p > 0) {
+        c.save(); c.globalAlpha *= p; c.translate(0, (1 - p) * 26);
+        const key = w.replace(/[^\p{L}\p{N}-]/gu, '').toLowerCase();
+        const hc = o.hl && o.hl[key];
+        if (hc && o.under) { const up = eout(seg(t, t0 + k * dt + .3, t0 + k * dt + .8)); c.fillStyle = hc; c.globalAlpha *= .9; rr(c, cx - 4, cy + lh * .28, (wd + 8) * up, 10, 5); c.fill(); c.globalAlpha /= .9; }
+        c.fillStyle = (hc && !o.under) ? hc : (o.fill || '#fff');
+        if (o.shadow) { c.shadowColor = o.shadow; c.shadowBlur = 18; c.shadowOffsetY = 4; }
+        c.fillText(w, cx, cy); c.restore();
+      }
+      cx += wd + sp; k++;
+    });
+  });
+  c.restore(); return { lines: lines.length, count: k };
+}
+function pill(c, s, x, y, bg, fg, font, alpha = 1) {
+  c.save(); c.globalAlpha *= alpha; c.font = font; const w = c.measureText(s).width + 56;
+  c.fillStyle = bg; rr(c, x - w / 2, y - 34, w, 68, 34); c.fill();
+  c.fillStyle = fg; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(s, x, y + 2); c.restore();
+}
+
+// ---------- grain ----------
+const grain = document.createElement('canvas'); grain.width = 540; grain.height = 960;
+{ const g = grain.getContext('2d'), id = g.createImageData(540, 960), r = rng(7);
+  for (let i = 0; i < id.data.length; i += 4) { const v = r() * 255; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+  g.putImageData(id, 0, 0); }
+
+// ======================================================================
+//  CHARACTERS
+// ======================================================================
+function drawArm(c, sx, sy, hx, hy, sleeve, skin, w = 36) {
+  c.save(); c.lineCap = 'round'; c.strokeStyle = shade(sleeve, -.25); c.lineWidth = w + 6;
+  c.beginPath(); c.moveTo(sx, sy); c.lineTo(hx, hy); c.stroke();
+  c.strokeStyle = sleeve; c.lineWidth = w; c.beginPath(); c.moveTo(sx, sy); c.lineTo(hx, hy); c.stroke();
+  c.fillStyle = skin; c.strokeStyle = shade(skin, -.3); c.lineWidth = 4;
+  c.beginPath(); c.arc(hx, hy, w * .55, 0, 7); c.fill(); c.stroke(); c.restore();
+}
+// eyes / mouth primitives (head-local coords)
+function eye(c, x, y, type, o) {
+  const ink = '#1E1A1A'; c.save(); c.fillStyle = ink; c.strokeStyle = ink; c.lineCap = 'round';
+  const lx = (o.look?.x || 0) * 4, ly = (o.look?.y || 0) * 4;
+  if (type === 'dot') { c.beginPath(); c.ellipse(x + lx, y + ly, 7.5, 9.5, 0, 0, 7); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(x + lx + 2.5, y + ly - 3, 2.6, 0, 7); c.fill(); }
+  else if (type === 'big') { c.fillStyle = '#fff'; c.strokeStyle = '#3a2f2f'; c.lineWidth = 3; c.beginPath(); c.ellipse(x, y, 15, 17, 0, 0, 7); c.fill(); c.stroke(); c.fillStyle = ink; c.beginPath(); c.arc(x + lx * 1.5, y + ly * 1.5, 7, 0, 7); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(x + lx * 1.5 + 2, y + ly * 1.5 - 2.5, 2.2, 0, 7); c.fill(); }
+  else if (type === 'happy') { c.lineWidth = o.thick ? 6.5 : 5; c.beginPath(); c.arc(x, y + 5, 10, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); }
+  else if (type === 'half') { c.lineWidth = 5; c.beginPath(); c.arc(x, y - 2, 9, Math.PI * .15, Math.PI * .85); c.stroke(); }
+  else if (type === 'closed') { c.lineWidth = 5; c.beginPath(); c.moveTo(x - 9, y); c.lineTo(x + 9, y); c.stroke(); }
+  c.restore();
+}
+function brow(c, x, y, raise, ang) {
+  c.save(); c.strokeStyle = '#2a201c'; c.lineWidth = 6; c.lineCap = 'round';
+  c.translate(x, y - raise); c.rotate(ang); c.beginPath(); c.moveTo(-11, 0); c.lineTo(11, 0); c.stroke(); c.restore();
+}
+function mouth(c, type, o, t) {
+  c.save(); c.lineCap = 'round'; c.lineJoin = 'round'; const ink = '#3a1f1f';
+  const my = 32;
+  if (type === 'smile' || type === 'gentle') {
+    c.strokeStyle = ink; c.lineWidth = 5; const w = type === 'smile' ? 18 : 12, d = type === 'smile' ? 10 : 5;
+    c.beginPath(); c.moveTo(-w, my - 2); c.quadraticCurveTo(0, my + d * 1.6, w, my - 2); c.stroke();
+  } else if (type === 'press') {
+    c.strokeStyle = ink; c.lineWidth = 5; c.beginPath();
+    c.moveTo(-14, my + 2); c.quadraticCurveTo(-7, my - 3, 0, my + 2); c.quadraticCurveTo(7, my + 6, 14, my + 1); c.stroke();
+  } else if (type === 'open' || type === 'talk') {
+    const op = type === 'open' ? (.65 + .35 * Math.abs(Math.sin(t * 17 + (o.seed || 0) * 9))) : o.talk;
+    const w = type === 'open' ? 25 : 16, h = (type === 'open' ? 30 : 18) * op + 3;
+    c.fillStyle = '#6B2226'; c.strokeStyle = ink; c.lineWidth = 4;
+    c.beginPath(); c.moveTo(-w, my - 4); c.quadraticCurveTo(0, my - 7, w, my - 4); c.quadraticCurveTo(w * .9, my + h, 0, my + h); c.quadraticCurveTo(-w * .9, my + h, -w, my - 4); c.closePath(); c.fill();
+    c.save(); c.clip(); c.fillStyle = '#fff'; c.fillRect(-w, my - 8, w * 2, 8); c.fillStyle = '#F07A7A'; c.beginPath(); c.ellipse(0, my + h, w * .6, h * .45, 0, 0, 7); c.fill(); c.restore();
+    c.beginPath(); c.moveTo(-w, my - 4); c.quadraticCurveTo(0, my - 7, w, my - 4); c.quadraticCurveTo(w * .9, my + h, 0, my + h); c.quadraticCurveTo(-w * .9, my + h, -w, my - 4); c.closePath(); c.stroke();
+  } else if (type === 'o') {
+    c.fillStyle = '#6B2226'; c.strokeStyle = ink; c.lineWidth = 4; c.beginPath(); c.ellipse(0, my + 2, 7, 9, 0, 0, 7); c.fill(); c.stroke();
+  } else if (type === 'smirk') {
+    c.strokeStyle = ink; c.lineWidth = 5; c.beginPath(); c.moveTo(-14, my + 2); c.quadraticCurveTo(4, my + 8, 17, my - 6); c.stroke();
+  }
+  c.restore();
+}
+
+const EXPR = {
+  neutral: { eye: 'dot', mouth: 'gentle' }, smile: { eye: 'happy', mouth: 'smile' },
+  hold: { eye: 'big', mouth: 'press' }, laugh: { eye: 'happy', mouth: 'open', thick: 1 },
+  curious: { eye: 'dot', mouth: 'o', brow: 1 }, talk: { eye: 'dot', mouth: 'talk' },
+  smirk: { eye: 'dot', mouth: 'smirk', brow: 1 }, wink: { eye: 'wink', mouth: 'smile' },
+  calm: { eye: 'half', mouth: 'gentle' }, warm: { eye: 'half', mouth: 'smile' }
+};
+
+function drawPerson(c, p, t, st = {}) {
+  const e = EXPR[st.expr || 'neutral'];
+  const kid = p.kid, bw = kid ? 95 : 118, bh = kid ? 140 : 165, R = kid ? 66 : 70;
+  let bounce = 0, rot = 0;
+  if (st.expr === 'laugh') { const ph = t * 9.5 + p.seed * 6; bounce = -Math.abs(Math.sin(ph)) * 13; rot = Math.sin(ph * .5) * .07; }
+  if (st.nod) bounce += Math.sin(t * 5) * 4;
+  rot += st.tilt || 0;
+  c.save(); c.translate(p.x, p.y); c.scale(p.s, p.s);
+  // shadow
+  c.fillStyle = 'rgba(0,0,0,.18)'; c.beginPath(); c.ellipse(0, 4, bw * 1.15, 18, 0, 0, 7); c.fill();
+  // body
+  c.save(); c.translate(0, bounce * .35);
+  c.fillStyle = p.outfit; c.strokeStyle = shade(p.outfit, -.3); c.lineWidth = 5;
+  c.beginPath(); c.moveTo(-bw, 0); c.quadraticCurveTo(-bw - 6, -bh * .85, -bw * .35, -bh); c.lineTo(bw * .35, -bh); c.quadraticCurveTo(bw + 6, -bh * .85, bw, 0); c.closePath(); c.fill(); c.stroke();
+  if (p.head !== 'tudung' && p.head !== 'hood') { // baju melayu collar + buttons
+    c.fillStyle = shade(p.outfit, -.12); rr(c, -bw * .32, -bh - 4, bw * .64, 22, 8); c.fill();
+    c.fillStyle = p.old || p.uai ? '#C9A227' : shade(p.outfit, .5);
+    for (let i = 0; i < 3; i++) { c.beginPath(); c.arc(0, -bh + 34 + i * 26, 4.5, 0, 7); c.fill(); }
+  }
+  if (p.head === 'hood') { c.strokeStyle = '#ddd'; c.lineWidth = 4; c.beginPath(); c.moveTo(-18, -bh); c.lineTo(-22, -bh + 60); c.moveTo(18, -bh); c.lineTo(22, -bh + 60); c.stroke(); }
+  c.restore();
+  if (st.under) st.under(c, bh, bounce);
+  // head
+  c.save(); c.translate(0, -bh - 58 + bounce); c.rotate(rot);
+  const puff = st.puff || 0;
+  if (p.head === 'hood') { c.fillStyle = p.hood; c.strokeStyle = shade(p.hood, -.35); c.lineWidth = 5; c.beginPath(); c.arc(0, -4, R * 1.27, 0, 7); c.fill(); c.stroke(); }
+  if (p.head === 'tudung') {
+    c.fillStyle = p.tud; c.strokeStyle = shade(p.tud, -.3); c.lineWidth = 5; c.beginPath();
+    c.moveTo(0, -R * 1.14); c.bezierCurveTo(R * 1.38, -R * 1.12, R * 1.2, R * .5, R * 1.75, R * 2.15); c.lineTo(-R * 1.75, R * 2.15);
+    c.bezierCurveTo(-R * 1.2, R * .5, -R * 1.38, -R * 1.12, 0, -R * 1.14); c.fill(); c.stroke();
+    c.fillStyle = p.skin; c.strokeStyle = shade(p.skin, -.25); c.lineWidth = 4; c.beginPath(); c.ellipse(0, 8, R * .8, R * .9, 0, 0, 7); c.fill(); c.stroke();
+  } else {
+    if (p.head !== 'hood') { c.fillStyle = p.skin; c.strokeStyle = shade(p.skin, -.3); c.lineWidth = 4; for (const sx of [-1, 1]) { c.beginPath(); c.arc(sx * R * (.97 + puff * .1), 6, 14, 0, 7); c.fill(); c.stroke(); } }
+    c.save(); c.scale(1 + puff * .13, 1 - puff * .02);
+    c.fillStyle = p.skin; c.strokeStyle = shade(p.skin, -.28); c.lineWidth = 4.5; c.beginPath(); c.arc(0, 0, R, 0, 7); c.fill(); c.stroke(); c.restore();
+  }
+  // beard
+  if (p.beard) {
+    c.fillStyle = p.beard; c.beginPath(); c.moveTo(-R * .93, -2); c.quadraticCurveTo(-R * .95, R * 1.35, 0, R * 1.42); c.quadraticCurveTo(R * .95, R * 1.35, R * .93, -2);
+    c.quadraticCurveTo(R * .6, R * .45, 0, R * .5); c.quadraticCurveTo(-R * .6, R * .45, -R * .93, -2); c.fill();
+    if (p.grey) { c.strokeStyle = p.grey; c.lineWidth = 3; c.lineCap = 'round'; for (const k of [-.45, -.15, .2, .5]) { c.beginPath(); c.moveTo(k * R, R * .75); c.lineTo(k * R * .9, R * 1.2); c.stroke(); } }
+  }
+  // headwear
+  if (p.head === 'kopiah' || p.head === 'hair' || p.head === 'serban') {
+    const col = p.head === 'hair' ? '#2B1B12' : p.head === 'serban' ? '#FBFBF6' : p.kc;
+    c.save(); c.beginPath(); c.arc(0, 0, R + 2.5, 0, 7); c.clip(); c.fillStyle = col; c.fillRect(-R - 6, -R - 6, 2 * R + 12, R * .62); c.restore();
+    if (p.head === 'kopiah') { c.fillStyle = col; c.strokeStyle = shade(col === '#FFFFFF' ? '#E8E8E8' : col, -.18); c.lineWidth = 4; rr(c, -R * .87, -R * 1.08, R * 1.74, R * .34, 12); c.fill(); c.stroke();
+      c.strokeStyle = 'rgba(0,0,0,.12)'; c.lineWidth = 3; c.beginPath(); c.moveTo(-R * .88, -R * .42); c.lineTo(R * .88, -R * .42); c.stroke(); }
+    if (p.head === 'hair') { c.fillStyle = col; for (const k of [-.55, -.18, .2, .55]) { c.beginPath(); c.arc(k * R, -R * .42, R * .2, 0, 7); c.fill(); } c.beginPath(); c.ellipse(0, -R * .78, R * .95, R * .35, 0, 0, 7); c.fill(); }
+    if (p.head === 'serban') {
+      c.fillStyle = '#FBFBF6'; c.strokeStyle = '#C9C8BC'; c.lineWidth = 4.5;
+      c.beginPath(); c.moveTo(R * .78, -R * .2); c.bezierCurveTo(R * 1.3, R * .1, R * 1.25, R * .9, R * 1.12, R * 1.75); c.lineTo(R * .78, R * 1.7); c.bezierCurveTo(R * .95, R * .9, R * .9, R * .35, R * .62, R * .05); c.fill(); c.stroke();
+      c.beginPath(); c.ellipse(0, -R * .66, R * 1.1, R * .56, 0, 0, 7); c.fill(); c.stroke();
+      c.strokeStyle = '#D8D7CB'; c.lineWidth = 4;
+      for (const k of [0, 1, 2]) { c.beginPath(); c.ellipse(0, -R * (.5 + k * .17), R * (1.02 - k * .12), R * .2, 0, Math.PI * .05, Math.PI * .95); c.stroke(); }
+      c.fillStyle = '#F1F0E8'; c.beginPath(); c.ellipse(0, -R * 1.08, R * .55, R * .22, 0, 0, 7); c.fill(); c.strokeStyle = '#C9C8BC'; c.stroke();
+    }
+  }
+  if (p.head === 'songkok') { c.fillStyle = '#1D1D22'; c.strokeStyle = '#000'; c.lineWidth = 3; rr(c, -R * .9, -R * 1.14, R * 1.8, R * .8, 9); c.fill(); c.stroke(); c.fillStyle = 'rgba(255,255,255,.08)'; c.fillRect(-R * .9, -R * 1.1, R * 1.8, R * .12); }
+  if (p.head === 'hood') { c.fillStyle = p.hood; c.strokeStyle = shade(p.hood, -.35); c.lineWidth = 5; c.beginPath(); c.arc(0, -4, R * 1.27, 0, 7); c.ellipse(0, 10, R * .86, R * .97, 0, 0, 7); c.fill('evenodd'); c.stroke(); }
+  // face
+  const ex = kid ? 24 : 25, ey = kid ? -2 : -6;
+  if (puff > 0) { c.fillStyle = `rgba(242,110,90,${.25 + puff * .35})`; for (const sx of [-1, 1]) { c.beginPath(); c.arc(sx * (40 + puff * 8), 22, 14 + puff * 12, 0, 7); c.fill(); } }
+  else if (st.expr === 'laugh' || st.expr === 'smile' || st.expr === 'wink' || st.expr === 'warm' || kid || p.head === 'tudung') { c.fillStyle = 'rgba(242,120,100,.32)'; for (const sx of [-1, 1]) { c.beginPath(); c.arc(sx * 40, 22, 13, 0, 7); c.fill(); } }
+  const blink = ((t + p.seed * 5) % 3.9) < .11 && (e.eye === 'dot' || e.eye === 'big');
+  const o = { look: st.look, thick: e.thick };
+  if (e.eye === 'wink') { eye(c, -ex, ey, 'happy', o); eye(c, ex, ey, 'dot', o); }
+  else { eye(c, -ex, ey, blink ? 'closed' : e.eye, o); eye(c, ex, ey, blink ? 'closed' : e.eye, o); }
+  const br = st.brow ?? (e.brow ? 1 : 0);
+  brow(c, -ex, ey - 26, (e.eye === 'big' ? 8 : 0) + (st.expr === 'curious' ? br * 8 : 0), st.expr === 'laugh' ? .15 : -.05);
+  brow(c, ex, ey - 26, (e.eye === 'big' ? 8 : 0) + br * 10, st.expr === 'laugh' ? -.15 : .08 - br * .12);
+  c.strokeStyle = shade(p.skin, -.35); c.lineWidth = 4; c.lineCap = 'round'; c.beginPath(); c.arc(0, 12, 7, Math.PI * .15, Math.PI * .85); c.stroke();
+  if (p.must) { c.fillStyle = p.must; c.beginPath(); c.ellipse(-11, 23, 13, 6, -.2, 0, 7); c.ellipse(11, 23, 13, 6, .2, 0, 7); c.fill(); }
+  mouth(c, e.mouth, { seed: p.seed, talk: st.talk || 0 }, t);
+  if (p.glasses) { c.strokeStyle = '#2b2b2b'; c.lineWidth = 4; rr(c, -ex - 17, ey - 13, 34, 27, 9); c.stroke(); rr(c, ex - 17, ey - 13, 34, 27, 9); c.stroke(); c.beginPath(); c.moveTo(-ex + 17, ey - 2); c.lineTo(ex - 17, ey - 2); c.stroke(); }
+  c.restore();
+  if (st.over) st.over(c, bh, bounce);
+  c.restore();
+}
+function headPos(p) { const bh = p.kid ? 140 : 165; return { x: p.x, y: p.y - (bh + 58) * p.s }; }
+
+// ---------- cast ----------
+const SK = { a: '#F2C9A0', b: '#E0AC80', c: '#C98E62', d: '#F5D2B0', e: '#D49C74' };
+const CAST = [
+  { id: 'budakA', x: 170, y: 1180, s: .72, kid: 1, skin: SK.d, outfit: '#F2B33D', head: 'hair', seed: .13 },
+  { id: 'abang', x: 410, y: 1180, s: .82, skin: SK.b, outfit: '#4A6FA5', head: 'songkok', glasses: 1, seed: .47 },
+  { id: 'atuk', x: 670, y: 1180, s: .82, skin: SK.c, outfit: '#EADBC0', head: 'kopiah', kc: '#FFFFFF', beard: '#F2F2F2', must: '#F2F2F2', seed: .71, old: 1 },
+  { id: 'pakB', x: 910, y: 1180, s: .82, skin: SK.a, outfit: '#9B5DE5', head: 'kopiah', kc: '#FFFFFF', seed: .29 },
+  { id: 'man1', x: 130, y: 1470, s: 1, skin: SK.c, outfit: '#E07A5F', head: 'kopiah', kc: '#F7F7F7', beard: '#2b2b2b', seed: .83 },
+  { id: 'pakcik', x: 390, y: 1470, s: 1, skin: SK.b, outfit: '#2E86AB', head: 'kopiah', kc: '#FFFFFF', must: '#3a2a22', seed: .05 },
+  { id: 'kid', x: 680, y: 1470, s: .9, kid: 1, skin: SK.a, outfit: '#F28C6B', head: 'kopiah', kc: '#FFFFFF', seed: .61 },
+  { id: 'man2', x: 940, y: 1470, s: 1, skin: SK.d, outfit: '#3D9970', head: 'songkok', seed: .37 },
+  { id: 'man3', x: 250, y: 1800, s: 1.25, skin: SK.c, outfit: '#81B29A', head: 'kopiah', kc: '#EFEFEF', beard: '#3b2a20', seed: .55 },
+  { id: 'remaja', x: 830, y: 1800, s: 1.25, skin: SK.a, outfit: '#3D405B', head: 'hood', hood: '#3D405B', seed: .91 },
+];
+const UAI = { id: 'uai', uai: 1, x: 540, y: 770, s: 1.12, skin: SK.e, outfit: '#F4F1E8', head: 'serban', beard: '#2F2A28', grey: '#8a8580', seed: .33 };
+const PK = CAST.find(p => p.id === 'pakcik'), KD = CAST.find(p => p.id === 'kid'), RJ = CAST.find(p => p.id === 'remaja');
+const PKH = headPos(PK), KDH = headPos(KD);
+CAST.forEach(p => { const h = headPos(p); p.dist = Math.hypot(h.x - PKH.x, h.y - PKH.y); });
+
+function exprAt(p, t) {
+  const st = { look: { x: 0, y: -.6 } };
+  if (p.id === 'pakcik') {
+    if (t < 1.6) { st.expr = 'hold'; st.puff = clamp(seg(t, 0, 1.55) * 1.05) + Math.sin(t * 40) * .03 * seg(t, .8, 1.6); st.look = { x: .3, y: -.4 }; return st; }
+    if (t < 1.75) { st.expr = 'laugh'; st.puff = 1 - seg(t, 1.6, 1.75); return st; }
+  }
+  if (p.id === 'kid' && t >= .9 && t < 1.95) { st.expr = 'curious'; st.look = { x: -1, y: 0 }; st.brow = 1; return st; }
+  if (t < 1.6) { st.expr = 'neutral'; return st; }
+  if (t < 4.5) { const d = p.id === 'pakcik' ? 0 : .12 + p.dist / 700; const end = 3.8 + p.seed * .5;
+    st.expr = t > 1.6 + d && t < end ? 'laugh' : t >= end ? 'smile' : 'neutral'; return st; }
+  if (t < 9) { if (p.id === 'remaja' && t < 6.2) { st.expr = 'smile'; return st; } st.expr = 'curious'; st.brow = .6; st.look = { x: (540 - p.x) / 700, y: -1 }; return st; }
+  if (t < 12) { st.expr = 'neutral'; st.look = { x: (540 - p.x) / 700, y: -1 }; return st; }
+  if (t < 15) { const s0 = 12.05 + p.seed * .45, e0 = 14.5 + p.seed * .4; st.expr = t > s0 && t < e0 ? 'laugh' : t >= e0 ? 'smile' : 'neutral'; return st; }
+  st.expr = 'calm'; return st;
+}
+
+// ======================================================================
+//  MOSQUE WORLD
+// ======================================================================
+function star8(c, x, y, r) { c.beginPath(); for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, rr2 = i % 2 ? r * .55 : r; c.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2); } c.closePath(); }
+function archPath(c, x, y0, y1, w) { // pointed arch, base y1, top y0
+  const hw = w / 2, sh = y0 + w * .55; c.beginPath(); c.moveTo(x - hw, y1); c.lineTo(x - hw, sh);
+  c.quadraticCurveTo(x - hw, y0 + w * .12, x, y0); c.quadraticCurveTo(x + hw, y0 + w * .12, x + hw, sh); c.lineTo(x + hw, y1); c.closePath();
+}
+function drawFan(c, x, y, t, wob) {
+  c.save(); c.translate(x, y); c.rotate(Math.sin(t * 20) * wob);
+  c.strokeStyle = '#2d4a46'; c.lineWidth = 8; c.beginPath(); c.moveTo(0, -260); c.lineTo(0, 0); c.stroke();
+  const a0 = t * 7;
+  for (let k = 0; k < 3; k++) { const a = a0 + k * Math.PI * 2 / 3, tx = Math.cos(a) * 230, ty = Math.sin(a) * 34;
+    c.fillStyle = '#E9E3D3'; c.strokeStyle = '#9b937f'; c.lineWidth = 3; c.beginPath(); c.moveTo(0, 0);
+    c.lineTo(tx - Math.sin(a) * 6, ty - 16 + Math.cos(a) * 3); c.lineTo(tx, ty + 14); c.closePath(); c.fill(); c.stroke(); }
+  c.fillStyle = '#C9C2AE'; c.beginPath(); c.ellipse(0, 0, 40, 18, 0, 0, 7); c.fill(); c.strokeStyle = '#857d68'; c.stroke(); c.restore();
+}
+function drawMosqueBg(c, t, warm) {
+  // wall
+  let g = c.createLinearGradient(0, -600, 0, 900); g.addColorStop(0, '#145E52'); g.addColorStop(1, '#1F7A6B'); c.fillStyle = g; c.fillRect(-400, -800, W + 800, 1700);
+  // pattern band
+  c.save(); c.globalAlpha = .28; c.strokeStyle = P.gold; c.lineWidth = 3;
+  for (let x = -300; x < W + 300; x += 90) { star8(c, x, 170, 32); c.stroke(); star8(c, x + 45, 215, 16); c.stroke(); }
+  c.restore();
+  c.fillStyle = 'rgba(232,181,71,.55)'; c.fillRect(-400, 118, W + 800, 4); c.fillRect(-400, 262, W + 800, 4);
+  // windows + rays
+  for (const wx of [130, 950]) {
+    archPath(c, wx, 330, 720, 170); const wg = c.createLinearGradient(0, 330, 0, 720); wg.addColorStop(0, '#FFF6D6'); wg.addColorStop(1, '#F3D58E'); c.fillStyle = wg; c.fill();
+    c.strokeStyle = P.gold; c.lineWidth = 8; c.stroke();
+    c.save(); archPath(c, wx, 330, 720, 170); c.clip(); c.strokeStyle = 'rgba(160,110,40,.45)'; c.lineWidth = 5;
+    for (let i = -6; i < 8; i++) { c.beginPath(); c.moveTo(wx - 120 + i * 40, 320); c.lineTo(wx - 120 + i * 40 + 260, 740); c.stroke(); c.beginPath(); c.moveTo(wx + 120 - i * 40, 320); c.lineTo(wx + 120 - i * 40 - 260, 740); c.stroke(); }
+    c.restore();
+  }
+  // mihrab
+  archPath(c, 540, 270, 900, 400); c.fillStyle = P.teal; c.fill(); c.strokeStyle = P.gold; c.lineWidth = 12; c.stroke();
+  archPath(c, 540, 315, 900, 330); c.strokeStyle = 'rgba(232,181,71,.5)'; c.lineWidth = 4; c.stroke();
+  c.save(); archPath(c, 540, 315, 900, 330); c.clip(); c.globalAlpha = .18; c.strokeStyle = P.gold; c.lineWidth = 3;
+  for (let y = 360; y < 900; y += 80) for (let x = 400; x < 700; x += 80) { star8(c, x + (y / 80 % 2) * 40, y, 28); c.stroke(); }
+  c.restore();
+  // stage + floor
+  c.fillStyle = '#7A4B2A'; c.fillRect(-400, 840, W + 800, 60);
+  g = c.createLinearGradient(0, 900, 0, 2100); g.addColorStop(0, '#2A8C74'); g.addColorStop(1, '#217562'); c.fillStyle = g; c.fillRect(-400, 900, W + 800, 1300);
+  c.strokeStyle = 'rgba(232,181,71,.28)'; c.lineWidth = 4;
+  const rows = [960, 1060, 1200, 1360, 1560, 1800, 2080];
+  rows.forEach((y, i) => { c.beginPath(); c.moveTo(-400, y); c.lineTo(W + 400, y); c.stroke();
+    const sp = 120 + i * 30; c.save(); c.strokeStyle = 'rgba(255,255,255,.07)'; c.lineWidth = 3;
+    for (let x = -300 + (i % 2) * sp / 2; x < W + 300; x += sp) { archPath(c, x, y + 14, (rows[i + 1] || y + 300) - 14, sp * .62); c.stroke(); } c.restore(); });
+  // platform for ustaz
+  c.fillStyle = '#8C5A34'; rr(c, 300, 760, 480, 120, 14); c.fill(); c.fillStyle = '#6E4426'; c.fillRect(300, 840, 480, 40);
+  c.fillStyle = 'rgba(232,181,71,.5)'; c.fillRect(300, 838, 480, 5);
+}
+function drawRays(c, t, k = 1) {
+  c.save(); c.globalCompositeOperation = 'lighter';
+  for (const [wx, dir] of [[130, 1], [950, -1]]) {
+    const g = c.createLinearGradient(wx, 400, wx + dir * 500, 1500); g.addColorStop(0, `rgba(255,236,180,${.16 * k})`); g.addColorStop(1, 'rgba(255,236,180,0)');
+    c.fillStyle = g; c.beginPath(); c.moveTo(wx - 80, 380); c.lineTo(wx + 80, 380); c.lineTo(wx + dir * 520 + 160 + Math.sin(t) * 10, 1700); c.lineTo(wx + dir * 520 - 180, 1700); c.closePath(); c.fill();
+  }
+  c.restore();
+}
+function uaiState(t) {
+  const st = { expr: 'smile', look: { x: 0, y: 0 } };
+  let raise = 0, note = 0, talk = 0;
+  if (t < 3.6) st.expr = 'warm';
+  else if (t < 4.6) { st.expr = 'smile'; raise = Math.sin(seg(t, 3.6, 4.6) * Math.PI); }
+  else if (t < 6.1) { st.expr = 'neutral'; st.look = { x: .8, y: .8 }; }
+  else if (t < 6.7) { st.expr = 'curious'; note = 1; st.look = { x: -.5, y: .6 }; }
+  else if (t < 9) { st.expr = 'smirk'; note = 1; st.brow = 1; }
+  else if (t < 12) { st.expr = 'talk'; talk = .25 + .75 * Math.abs(Math.sin(t * 13) * Math.sin(t * 4.3 + 1)); st.brow = t < 11 ? .6 : 0; }
+  else if (t < 15) { st.expr = t < 14.3 ? 'laugh' : 'warm'; }
+  else st.expr = 'calm';
+  st.talk = talk;
+  st.under = (c, bh) => { // chair
+    c.save(); c.fillStyle = '#6B3F22'; c.strokeStyle = '#4a2a14'; c.lineWidth = 5; rr(c, -150, -bh - 150, 300, 160, [60, 60, 10, 10]); c.fill(); c.stroke(); c.restore(); };
+  st.over = (c, bh) => {
+    // mic arm
+    drawArm(c, 100, -bh + 50, 82, -bh + 12, '#EDE9DD', UAI.skin, 34);
+    c.save(); c.translate(80, -bh + 2); c.rotate(-.18); c.fillStyle = '#222'; rr(c, -9, -70, 18, 76, 8); c.fill(); c.fillStyle = '#555'; c.beginPath(); c.arc(0, -78, 17, 0, 7); c.fill(); c.strokeStyle = '#888'; c.lineWidth = 2; for (let i = -12; i < 14; i += 6) { c.beginPath(); c.moveTo(i, -92); c.lineTo(i, -64); c.stroke(); } c.restore();
+    if (raise > 0) { drawArm(c, -92, -bh + 40, lerp(-110, -175, raise), lerp(-bh + 40, -bh - 120, raise) + Math.sin(t * 14) * 8 * raise, '#EDE9DD', UAI.skin, 34); }
+    if (note > 0) { drawArm(c, -92, -bh + 40, -70, -bh - 10, '#EDE9DD', UAI.skin, 34);
+      c.save(); c.translate(-70, -bh - 40); c.rotate(-.15); c.fillStyle = '#fff'; c.strokeStyle = '#bbb'; c.lineWidth = 3; rr(c, -40, -50, 80, 64, 6); c.fill(); c.stroke(); c.strokeStyle = '#c7c7c7'; for (let i = 0; i < 3; i++) { c.beginPath(); c.moveTo(-28, -32 + i * 16); c.lineTo(28, -32 + i * 16); c.stroke(); } c.restore(); }
+    // table
+    c.fillStyle = '#0F5245'; c.strokeStyle = '#08342c'; c.lineWidth = 5; rr(c, -175, -38, 350, 110, 12); c.fill(); c.stroke();
+    c.fillStyle = P.gold; c.fillRect(-175, -22, 350, 6); c.fillRect(-175, 50, 350, 6);
+    c.fillStyle = '#8B2E2E'; rr(c, 60, -62, 90, 26, 4); c.fill(); c.fillStyle = '#F7EEDC'; c.fillRect(64, -58, 82, 6);
+  };
+  return st;
+}
+let shakeR = rng(99);
+function camAt(t) {
+  let x, y, z;
+  if (t < .9) { x = PKH.x; y = PKH.y + 12; z = lerp(5, 5.22, seg(t, 0, .9)); }
+  else if (t < 1.2) { x = KDH.x - 20; y = KDH.y + 10; z = 4.4; }
+  else if (t < 1.6) { x = PKH.x; y = PKH.y + 12; z = lerp(5.25, 5.45, seg(t, 1.2, 1.6)); }
+  else if (t < 2.15) { x = PKH.x; y = PKH.y + 12; z = 5.45 - .3 * eout(seg(t, 1.6, 2.15)); }
+  else if (t < 4.6) { const p = eio(seg(t, 2.15, 4.6)); z = Math.exp(lerp(Math.log(5.15), Math.log(1), p)); x = lerp(PKH.x, 540, p); y = lerp(PKH.y + 12, 960, p); }
+  else if (t < 9) { const p = eio(seg(t, 4.6, 9)); x = 540; y = lerp(960, 900, p); z = lerp(1, 1.1, p); }
+  else if (t < 12) { const p = seg(t, 9, 12); x = 540; y = lerp(610, 590, p); z = lerp(1.85, 2.0, p); }
+  else if (t < 15) { const p = seg(t, 12, 15); x = 540; y = 1400; z = lerp(1.22, 1.3, p); }
+  else { const p = eio(seg(t, 15, 17)); x = 540; y = lerp(620, 545, p); z = lerp(1.7, 2.35, p); }
+  // shake
+  let sh = 0; if (t > 1.6 && t < 2.3) sh = 14 * (1 - seg(t, 1.6, 2.3)); if (t > 12 && t < 13) sh = 6 * (1 - seg(t, 12, 13));
+  if (t > .8 && t < 1.6 && !(t > .9 && t < 1.2)) sh = 2.5 * seg(t, .8, 1.6);
+  const fr = Math.floor(t * 30); const r = rng(fr * 7 + 3);
+  return { x: x + (r() - .5) * sh / z * 2, y: y + (r() - .5) * sh / z * 2, z };
+}
+
+function sceneMosque(c, t) {
+  c.save(); c.fillStyle = P.teal; c.fillRect(0, 0, W, H);
+  const cam = camAt(t);
+  c.save(); c.translate(W / 2, H / 2); c.scale(cam.z, cam.z); c.translate(-cam.x, -cam.y);
+  drawMosqueBg(c, t);
+  drawPerson(c, UAI, t, uaiState(t));
+  const order = [...CAST].sort((a, b) => a.y - b.y);
+  for (const p of order) {
+    const st = exprAt(p, t);
+    if (p.id === 'remaja' && t > 4.4 && t < 5.4) { const a = Math.sin(seg(t, 4.4, 5.4) * Math.PI);
+      st.over = (cc, bh) => drawArm(cc, -60, -bh + 40, lerp(-60, -150, a), lerp(-bh + 40, -bh - 150, a), p.hood, p.skin, 34); }
+    drawPerson(c, p, t, st);
+  }
+  // sound rings from pakcik
+  if (t > 1.6 && t < 2.6) { for (let k = 0; k < 3; k++) { const p = seg(t, 1.6 + k * .12, 2.3 + k * .12); if (p <= 0 || p >= 1) continue;
+    c.save(); c.globalAlpha = 1 - p; c.strokeStyle = P.coral; c.lineWidth = 7; c.beginPath(); c.arc(PKH.x, PKH.y + 40, 30 + p * 160, -Math.PI * .85, -Math.PI * .15); c.stroke();
+    c.beginPath(); c.arc(PKH.x, PKH.y + 40, 30 + p * 160, Math.PI * .15, Math.PI * .85); c.stroke(); c.restore(); } }
+  // paper plane
+  if (t > 4.8 && t < 6.05) { const p = eio(seg(t, 4.8, 6.05)); const a = { x: RJ.x - 150, y: RJ.y - 340 }, b = { x: 600, y: 610 }, cp = { x: 980, y: 820 };
+    const q = (u) => ({ x: (1 - u) ** 2 * a.x + 2 * (1 - u) * u * cp.x + u * u * b.x, y: (1 - u) ** 2 * a.y + 2 * (1 - u) * u * cp.y + u * u * b.y });
+    const pt = q(p), pn = q(Math.min(1, p + .02)); const ang = Math.atan2(pn.y - pt.y, pn.x - pt.x);
+    c.save(); c.globalAlpha = .35; c.strokeStyle = '#fff'; c.setLineDash([10, 14]); c.lineWidth = 4; c.beginPath(); for (let u = Math.max(0, p - .3); u <= p; u += .02) { const z = q(u); c.lineTo(z.x, z.y); } c.stroke(); c.restore();
+    c.save(); c.translate(pt.x, pt.y); c.rotate(ang); c.scale(1.4, 1.4 + Math.sin(t * 20) * .1);
+    c.fillStyle = '#fff'; c.strokeStyle = '#9aa'; c.lineWidth = 3; c.beginPath(); c.moveTo(34, 0); c.lineTo(-24, -18); c.lineTo(-12, 0); c.lineTo(-24, 18); c.closePath(); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(34, 0); c.lineTo(-12, 0); c.stroke(); c.restore(); }
+  drawFan(c, 540, 40, t, t > 12 && t < 14.5 ? .06 : .004);
+  drawRays(c, t);
+  c.restore();
+  // warm tint (mood switch)
+  if (t > 15) { const p = seg(t, 15, 16.4); c.save(); c.globalCompositeOperation = 'soft-light'; c.fillStyle = `rgba(232,181,71,${.75 * p})`; c.fillRect(0, 0, W, H); c.restore();
+    const g = c.createRadialGradient(540, 700, 100, 540, 900, 1100); g.addColorStop(0, `rgba(255,220,140,${.18 * p})`); g.addColorStop(1, `rgba(14,59,67,${.45 * p})`); c.fillStyle = g; c.fillRect(0, 0, W, H); }
+  hookOverlays(c, t);
+  c.restore();
+}
+
+// ---------- hook + mosque overlays (screen space) ----------
+function burst(c, x, y, r, n, col) { c.beginPath(); for (let i = 0; i < n * 2; i++) { const a = i * Math.PI / n, rr2 = i % 2 ? r * .62 : r * (1 + (i % 4 === 0 ? .12 : 0)); c.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2); } c.closePath(); c.fillStyle = col; c.fill(); }
+const HOOK1 = 'JANGAN GELAK...';
+function hookOverlays(c, t) {
+  // 1) typewriter "JANGAN GELAK..."
+  if (t < 2.2) {
+    const n = Math.floor(clamp(seg(t, .02, .7)) * HOOK1.length + (t > .02 ? 1 : 0));
+    const sh = seg(t, .8, 1.6), col = sh > 0 ? `rgb(${lerp(255, 242, sh)},${lerp(255, 140, sh)},${lerp(255, 107, sh)})` : '#fff';
+    c.save(); c.font = `800 128px ${FB}`; c.textBaseline = 'middle'; c.textAlign = 'left';
+    const s = HOOK1.slice(0, Math.min(n, HOOK1.length)), full = c.measureText(HOOK1).width; let x = 540 - full / 2;
+    const r = rng(Math.floor(t * 30));
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i], w = c.measureText(ch).width; let dx = 0, dy = 0, a = 1, rot = 0;
+      if (t < 1.6) { dx = (r() - .5) * 10 * sh; dy = (r() - .5) * 10 * sh; }
+      else { const rr3 = rng(i * 31 + 5), p = seg(t, 1.6, 2.15); dx = (rr3() - .5) * 900 * p; dy = (rr3() - .7) * 900 * p + 600 * p * p; rot = (rr3() - .5) * 6 * p; a = 1 - p; }
+      c.save(); c.globalAlpha = a; c.translate(x + w / 2 + dx, 330 + dy); c.rotate(rot);
+      c.lineJoin = 'round'; c.lineWidth = 16; c.strokeStyle = P.teal; c.strokeText(ch, -w / 2, 0);
+      c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 20; c.fillStyle = col; c.fillText(ch, -w / 2, 0); c.restore();
+      x += w;
+    }
+    c.restore();
+  }
+  // 2) PFFFT burst
+  if (t > 1.6 && t < 2.75) {
+    const p = pop(t, 1.6, .35), a = 1 - seg(t, 2.35, 2.75);
+    c.save(); c.globalAlpha = a; c.translate(700, 760); c.rotate(-.12); c.scale(p, p);
+    burst(c, 0, 0, 260, 12, P.gold); burst(c, 0, 0, 215, 12, '#FFF3C4');
+    txt(c, 'PFFFT!', 0, 8, { font: `800 150px ${FB}`, fill: P.coral, stroke: '#fff', sw: 18, shadow: 'rgba(0,0,0,.35)' });
+    c.restore();
+    // emoji
+    const pe = pop(t, 1.75, .4); c.save(); c.globalAlpha = a; c.translate(330, 640); c.scale(pe, pe); c.rotate(.2); c.font = `120px ${FE}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('💥', 0, 0); c.restore();
+  }
+  // 3) "Satu masjid GELAK..."
+  if (t > 2.25 && t < 4.7) {
+    const p1 = eout(seg(t, 2.25, 2.6)), p2 = eout(seg(t, 2.5, 2.85)), out = 1 - seg(t, 4.3, 4.7);
+    c.save(); c.globalAlpha = out;
+    c.fillStyle = 'rgba(10,42,48,.72)'; rr(c, 60, 210 - (1 - p1) * 40, 960, 330, 50); c.globalAlpha = out * p1; c.fill(); c.globalAlpha = out;
+    const pulse = 1 + .08 * Math.max(0, Math.sin((t - 2.6) * 9));
+    rich(c, [{ s: 'Satu masjid ' }, { s: 'GELAK', fill: P.coral }, { s: '...' }], 540, 300 + (1 - p1) * 60, { font: `800 96px ${FB}`, alpha: p1 });
+    rich(c, [{ s: 'sebab ' }, { s: 'SATU', fill: P.gold, scale: pulse, glow: 'rgba(232,181,71,.7)' }, { s: ' soalan ni 😂' }], 540, 430 + (1 - p2) * 60, { font: `800 84px ${FB}`, alpha: p2 });
+    c.restore();
+  }
+  // nametag
+  if (t > 3.7 && t < 8.6) {
+    const p = eout(seg(t, 3.7, 4.15)), a = 1 - seg(t, 8.2, 8.6);
+    c.save(); c.globalAlpha = a; c.translate((1 - p) * -700, 0);
+    c.font = `800 52px ${FB}`; const w = c.measureText('Ustaz Azhar Idrus').width + 150;
+    c.fillStyle = P.cream; c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = 24; rr(c, 540 - w / 2, 905, w, 92, 46); c.fill(); c.shadowColor = 'transparent';
+    c.fillStyle = P.emerald; c.beginPath(); c.arc(540 - w / 2 + 48, 951, 32, 0, 7); c.fill();
+    c.font = `40px ${FE}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🎙️', 540 - w / 2 + 48, 953);
+    txt(c, 'Ustaz Azhar Idrus', 540 + 36, 955, { font: `800 52px ${FB}`, fill: P.teal });
+    c.restore();
+  }
+  // question card
+  if (t > 6.15 && t < 9.05) {
+    const p = pop(t, 6.15, .5), out = seg(t, 8.7, 9.05);
+    c.save(); c.translate(540, 1360 + out * 200); c.rotate(-.035 + Math.sin(t * 2) * .01); c.scale(p * (1 - out * .6), p * (1 - out * .6)); c.globalAlpha = 1 - out;
+    c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 40; c.shadowOffsetY = 14; c.fillStyle = P.cream; rr(c, -450, -200, 900, 400, 26); c.fill(); c.shadowColor = 'transparent';
+    c.strokeStyle = 'rgba(31,122,107,.18)'; c.lineWidth = 3; for (let y = -90; y < 190; y += 70) { c.beginPath(); c.moveTo(-410, y); c.lineTo(410, y); c.stroke(); }
+    c.strokeStyle = 'rgba(242,140,107,.5)'; c.beginPath(); c.moveTo(-370, -200); c.lineTo(-370, 200); c.stroke();
+    pill(c, 'SOALAN JEMAAH', -200, -200, P.coral, '#fff', `800 34px ${FB}`);
+    txt(c, 'Ustaz, boleh ke kita', 20, -40, { font: `700 66px ${FB}`, fill: P.teal });
+    c.font = `800 92px ${FB}`; const wG = c.measureText('GELAK').width, wR = c.measureText(' dalam masjid?').width, tot = wG + wR + 100;
+    const hp = eout(seg(t, 6.8, 7.2)); c.fillStyle = 'rgba(242,140,107,.55)'; rr(c, 20 - tot / 2 - 10, 50, (wG + 20) * hp, 70, 14); c.fill();
+    rich(c, [{ s: 'GELAK', fill: '#B9452A' }, { s: ' dalam masjid?', fill: P.teal }, { s: ' 🤭' }], 20, 88, { font: `800 92px ${FB}` });
+    c.restore();
+    // rotating ?
+    c.save(); c.globalAlpha = (1 - out) * p; c.translate(900, 1120); c.rotate(Math.sin(t * 3) * .35); c.scale(p, p);
+    txt(c, '?', 0, 0, { font: `800 220px ${FB}`, fill: P.gold, stroke: P.teal, sw: 14 }); c.restore();
+  }
+  // laugh emojis 12-15
+  if (t > 12 && t < 15.2) {
+    const r = rng(42); for (let i = 0; i < 11; i++) { const t0 = 12.05 + i * .24, x = 110 + r() * 860, y = 380 + r() * 1100, em = r() < .6 ? '😂' : '🤣', sz = 90 + r() * 70;
+      if (t < t0) continue; const p = pop(t, t0, .4), lp = seg(t, t0, t0 + 1.6);
+      c.save(); c.globalAlpha = 1 - seg(t, t0 + 1.1, t0 + 1.6); c.translate(x, y - lp * 160); c.rotate(Math.sin(t * 6 + i) * .25); c.scale(p, p);
+      c.font = `${sz | 0}px ${FE}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(em, 0, 0); c.restore(); }
+  }
+  // "Tapi... ada ILMU"
+  if (t > 15.25) {
+    const p1 = eout(seg(t, 15.25, 15.7)), p2 = eout(seg(t, 15.7, 16.1));
+    c.save(); c.globalAlpha = p1; c.fillStyle = 'rgba(10,42,48,.78)'; rr(c, 70, 1180, 940, 320, 48); c.fill(); c.restore();
+    txt(c, 'Tapi...', 540, 1270 + (1 - p1) * 40, { font: `800 84px ${FB}`, fill: P.cream, alpha: p1 });
+    const gl = .5 + .5 * Math.sin(t * 6);
+    rich(c, [{ s: 'ada ' }, { s: 'ILMU', fill: P.gold, glow: `rgba(232,181,71,${.6 + .4 * gl})`, scale: 1 + .06 * gl }, { s: ' di sebalik lawak ni 👇' }], 540, 1400 + (1 - p2) * 40, { font: `800 70px ${FB}`, alpha: p2 });
+  }
+}
+
+// ======================================================================
+//  ILMU (abstract) SCENES
+// ======================================================================
+const PARTS = (() => { const r = rng(5), a = []; for (let i = 0; i < 70; i++) a.push({ x: r() * W, y: r() * H, s: 2 + r() * 6, v: 30 + r() * 90, ph: r() * 6 }); return a; })();
+function drawAbstract(c, t, tint) {
+  const g = c.createRadialGradient(540, 760, 50, 540, 960, 1300); g.addColorStop(0, tint || '#16555B'); g.addColorStop(1, P.deep); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.save(); c.translate(540, 760); c.rotate(t * .05); c.globalAlpha = .1; c.strokeStyle = P.gold; c.lineWidth = 3;
+  for (let ring = 1; ring < 7; ring++) { const n = ring * 8; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; star8(c, Math.cos(a) * ring * 150, Math.sin(a) * ring * 150, 34); c.stroke(); } }
+  c.restore();
+  c.save(); c.globalCompositeOperation = 'lighter';
+  for (const p of PARTS) { const y = ((p.y - t * p.v) % H + H) % H, a = .35 + .35 * Math.sin(t * 2 + p.ph);
+    const gg = c.createRadialGradient(p.x, y, 0, p.x, y, p.s * 4); gg.addColorStop(0, `rgba(255,214,120,${a})`); gg.addColorStop(1, 'rgba(255,214,120,0)'); c.fillStyle = gg; c.beginPath(); c.arc(p.x, y, p.s * 4, 0, 7); c.fill(); }
+  c.restore();
+}
+function cardBox(c, x, y, w, h) { c.save(); c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 50; c.shadowOffsetY = 18; c.fillStyle = P.cream; rr(c, x, y, w, h, 44); c.fill(); c.restore();
+  c.strokeStyle = 'rgba(232,181,71,.9)'; c.lineWidth = 5; rr(c, x + 14, y + 14, w - 28, h - 28, 34); c.stroke(); }
+function bigNum(c, s, x, y, a) { txt(c, s, x, y, { font: `800 380px ${FB}`, fill: `rgba(232,181,71,${.16 * a})`, align: 'left' }); }
+
+function card1(c, t) {
+  const inP = eout(seg(t, 17.7, 18.35)), outP = ein(seg(t, 24.5, 25.1)), dx = (1 - inP) * 1100 - outP * 1100;
+  c.save(); c.translate(dx * .4, 0); bigNum(c, '01', 50, 470, inP * (1 - outP)); c.restore();
+  // smile emblem
+  c.save(); c.translate(540 + dx * .6, 580 + Math.sin(t * 2) * 10); c.globalAlpha = 1 - outP;
+  c.shadowColor = 'rgba(232,181,71,.8)'; c.shadowBlur = 40; c.strokeStyle = P.gold; c.lineWidth = 16; c.lineCap = 'round';
+  const a1 = eio(seg(t, 17.7, 18.7)); c.beginPath(); c.arc(0, 0, 170, -Math.PI / 2, -Math.PI / 2 + a1 * Math.PI * 2); c.stroke();
+  const ep = pop(t, 18.6, .35); c.fillStyle = P.gold; for (const sx of [-1, 1]) { c.beginPath(); c.arc(sx * 58, -40, 20 * ep, 0, 7); c.fill(); }
+  const sp = eio(seg(t, 18.75, 19.4)); c.beginPath(); c.arc(0, 0, 100, Math.PI * .18, Math.PI * (.18 + .64 * sp)); c.stroke();
+  c.restore();
+  // card
+  c.save(); c.translate(dx, 0);
+  cardBox(c, 60, 860, 960, 830);
+  pill(c, 'ILMU #1', 540, 860, P.coral, '#fff', `800 38px ${FB}`);
+  txt(c, 'Rasulullah SAW lebih banyak', 540, 975, { font: `600 54px ${FP}`, fill: P.teal });
+  const tp = pop(t, 18.5, .5);
+  c.save(); c.translate(540, 1080); c.scale(tp, tp); txt(c, 'TERSENYUM 😊', 0, 0, { font: `800 110px ${FB}`, fill: P.emerald }); c.restore();
+  c.fillStyle = P.gold; rr(c, 300, 1140, 480 * eout(seg(t, 18.9, 19.4)), 10, 5); c.fill();
+  words(c, '“Aku tidak pernah melihat Rasulullah SAW ketawa terbahak-bahak sehingga nampak anak tekaknya. Baginda hanya tersenyum.”', 540, 1250, 830, 66, `400 44px ${FP}`, t, 19.3, .14, { fill: '#24453F', hl: { tersenyum: '#1F7A6B', 'terbahak-bahak': '#B9452A' } });
+  const sp2 = eout(seg(t, 22.4, 22.9)); txt(c, '— Aisyah r.a., HR Bukhari', 540, 1600 + (1 - sp2) * 20, { font: `600 40px ${FP}`, fill: '#B07A12', alpha: sp2 });
+  c.restore();
+}
+function card2(c, t) {
+  const inP = eout(seg(t, 25.0, 25.6)), outP = ein(seg(t, 32.5, 33.1)), dx = (1 - inP) * 1100 - outP * 1100;
+  c.save(); c.translate(dx * .4, 0); bigNum(c, '02', 50, 380, inP * (1 - outP)); c.restore();
+  // arabic stroke reveal (right-to-left)
+  c.save(); c.translate(dx * .6, 0); c.globalAlpha = 1 - outP;
+  const rv = eio(seg(t, 25.6, 27.8));
+  const lines = ['تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ', 'لَكَ صَدَقَةٌ'];
+  c.save(); c.beginPath(); c.rect(1040 - rv * 1010, 0, 1100, 980); c.clip();
+  lines.forEach((s, i) => txt(c, s, 540, 520 + i * 170, { font: `700 ${i ? 130 : 104}px ${FA}`, fill: P.gold, shadow: 'rgba(232,181,71,.65)', blur: 34, sy: 0 }));
+  c.restore();
+  if (rv > 0 && rv < 1) { const ex = 1040 - rv * 1010; const g = c.createRadialGradient(ex, 600, 0, ex, 600, 120); g.addColorStop(0, 'rgba(255,240,190,.95)'); g.addColorStop(1, 'rgba(255,240,190,0)'); c.fillStyle = g; c.beginPath(); c.arc(ex, 600, 120, 0, 7); c.fill(); }
+  c.restore();
+  c.save(); c.translate(dx, 0);
+  cardBox(c, 60, 940, 960, 720);
+  pill(c, 'ILMU #2', 540, 940, P.coral, '#fff', `800 38px ${FB}`);
+  words(c, '“Senyumanmu di hadapan saudaramu adalah sedekah.”', 540, 1080, 860, 100, `800 76px ${FB}`, t, 27.8, .26, { fill: P.teal, hl: { sedekah: P.coral }, under: 1 });
+  const s1 = eout(seg(t, 30.0, 30.4)); txt(c, '— HR Tirmizi', 540, 1390 + (1 - s1) * 20, { font: `600 42px ${FP}`, fill: '#B07A12', alpha: s1 });
+  const s2 = pop(t, 30.7, .5); c.save(); c.translate(540, 1520); c.scale(s2, s2); c.fillStyle = P.emerald; rr(c, -330, -50, 660, 100, 50); c.fill(); txt(c, 'Senyum pun dapat pahala! 🤍', 0, 2, { font: `800 50px ${FB}`, fill: '#fff' }); c.restore();
+  c.restore();
+}
+function panelBg(c, kind, w, h, t) {
+  if (kind === 0) { // classroom
+    c.fillStyle = '#FCE7B2'; c.fillRect(0, 0, w, h); c.fillStyle = '#2F5D50'; rr(c, 360, 40, 560, 200, 12); c.fill(); c.strokeStyle = '#8C5A34'; c.lineWidth = 12; c.stroke();
+    c.fillStyle = '#C49A6C'; c.fillRect(0, h - 70, w, 70);
+  } else if (kind === 1) { // room
+    c.fillStyle = '#F6C9B8'; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(255,255,255,.4)'; rr(c, 620, 50, 260, 180, 16); c.fill(); c.fillStyle = '#E9A98F'; c.fillRect(0, h - 70, w, 70);
+  } else { // mosque
+    c.fillStyle = '#1F7A6B'; c.fillRect(0, 0, w, h); archPath(c, 760, 40, h, 300); c.fillStyle = P.teal; c.fill(); c.strokeStyle = P.gold; c.lineWidth = 8; c.stroke();
+    c.fillStyle = '#2A8C74'; c.fillRect(0, h - 70, w, 70);
+  }
+}
+const KAWAN = { x: 420, y: 430, s: .78, kid: 1, skin: SK.c, outfit: '#FFFFFF', head: 'hair', seed: .2 };
+const BUDAK2 = { x: 230, y: 430, s: .9, kid: 1, skin: SK.d, outfit: '#FFFFFF', head: 'kopiah', kc: '#FFFFFF', seed: .4 };
+const GIRL = { x: 230, y: 430, s: 1, skin: SK.a, outfit: '#F2B33D', head: 'tudung', tud: '#6E5C8F', seed: .8 };
+const ATUK2 = { x: 230, y: 430, s: 1, skin: SK.c, outfit: '#EADBC0', head: 'kopiah', kc: '#FFFFFF', beard: '#F2F2F2', must: '#F2F2F2', seed: .7, old: 1 };
+function montage(c, t) {
+  const hp = eout(seg(t, 33.1, 33.6)), outA = seg(t, 41.0, 41.8);
+  c.save(); c.globalAlpha = 1 - outA;
+  pill(c, 'ILMU #3', 540, 120 - (1 - hp) * 60, P.coral, '#fff', `800 38px ${FB}`, hp);
+  txt(c, 'Jangan banyak ketawa —', 540, 215, { font: `800 70px ${FB}`, fill: P.cream, alpha: hp });
+  rich(c, [{ s: 'ia boleh ' }, { s: 'mematikan hati', fill: P.coral }, { s: ' 💔' }], 540, 300, { font: `800 70px ${FB}`, alpha: eout(seg(t, 33.4, 33.9)) });
+  txt(c, '— HR Ibnu Majah', 540, 380, { font: `600 38px ${FP}`, fill: P.gold, alpha: eout(seg(t, 33.8, 34.2)) });
+  const tx = [['Senyum bila', 'jumpa kawan'], ['Gelak', 'berpada-pada'], ['Jaga adab di', 'rumah Allah']];
+  for (let i = 0; i < 3; i++) {
+    const t0 = 34.0 + i * .7, p = eout(seg(t, t0, t0 + .55)), dir = i % 2 ? 1 : -1, y = 450 + i * 460;
+    c.save(); c.translate(dir * (1 - p) * 1200, 0); c.translate(50, y);
+    c.save(); c.shadowColor = 'rgba(0,0,0,.4)'; c.shadowBlur = 30; c.shadowOffsetY = 10; rr(c, 0, 0, 980, 430, 36); c.fillStyle = '#000'; c.fill(); c.restore();
+    c.save(); rr(c, 0, 0, 980, 430, 36); c.clip(); panelBg(c, i, 980, 430, t);
+    if (i === 0) { const wv = Math.sin(t * 9); drawPerson(c, BUDAK2, t, { expr: 'smile', over: (cc, bh) => drawArm(cc, 70, -bh + 40, 150, -bh - 70 + wv * 15, '#FFFFFF', BUDAK2.skin, 30) });
+      drawPerson(c, KAWAN, t, { expr: t > t0 + .8 ? 'smile' : 'neutral', over: (cc, bh) => drawArm(cc, -70, -bh + 40, -150, -bh - 70 - wv * 15, '#FFFFFF', KAWAN.skin, 30) }); }
+    if (i === 1) { const lookUp = t > 37.3; drawPerson(c, GIRL, t, { expr: lookUp ? 'warm' : 'smile', tilt: lookUp ? 0 : .08, look: lookUp ? { x: 0, y: 0 } : { x: .5, y: 1 }, over: (cc, bh) => {
+        drawArm(cc, 80, -bh + 50, 120, -bh + 10, '#6E5C8F', GIRL.skin, 30); cc.save(); cc.translate(140, -bh - 30); cc.rotate(.15); cc.fillStyle = '#222'; rr(cc, -38, -66, 76, 132, 14); cc.fill(); cc.fillStyle = '#9ED8F0'; rr(cc, -31, -56, 62, 112, 8); cc.fill();
+        cc.font = `40px ${FE}`; cc.textAlign = 'center'; cc.textBaseline = 'middle'; cc.fillText('😂', 0, 0); cc.restore(); } }); }
+    if (i === 2) drawPerson(c, ATUK2, t, { expr: 'warm', nod: 1 });
+    // check + text
+    const ck = pop(t, 36.0 + i * 1.0, .45), tp = eout(seg(t, 36.1 + i * 1.0, 36.6 + i * 1.0));
+    c.save(); c.translate(565, 215); c.scale(ck, ck); c.fillStyle = '#2FBF71'; c.beginPath(); c.arc(0, 0, 44, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 11; c.lineCap = 'round'; c.lineJoin = 'round';
+    c.beginPath(); c.moveTo(-19, 1); c.lineTo(-5, 16); c.lineTo(21, -14); c.stroke(); c.restore();
+    const dark = i === 2;
+    tx[i].forEach((s, j) => txt(c, s, 630 + (1 - tp) * 40, 184 + j * 66, { font: `800 54px ${FB}`, fill: dark ? P.cream : P.teal, align: 'left', alpha: tp }));
+    c.restore(); c.restore();
+  }
+  c.restore();
+}
+function sceneIlmu(c, t) {
+  drawAbstract(c, t);
+  if (t < 25.2) card1(c, t);
+  if (t > 24.9 && t < 33.2) card2(c, t);
+  if (t > 33.0) montage(c, t);
+}
+
+// ======================================================================
+//  DUSK + CTA
+// ======================================================================
+const STARS = (() => { const r = rng(11), a = []; for (let i = 0; i < 90; i++) a.push({ x: r() * W, y: r() * 1300 - 500, s: 1 + r() * 2.6, ph: r() * 6, d: r() }); return a; })();
+function mosqueSil(c) {
+  const col = '#2A1F3D'; c.fillStyle = col;
+  // minarets
+  for (const mx of [170, 910]) { c.fillRect(mx - 34, 820, 68, 1100); c.fillRect(mx - 48, 960, 96, 24); c.fillRect(mx - 48, 1180, 96, 24);
+    c.beginPath(); c.moveTo(mx - 40, 830); c.quadraticCurveTo(mx, 700, mx, 650); c.quadraticCurveTo(mx, 700, mx + 40, 830); c.closePath(); c.fill(); }
+  // side domes
+  for (const sx of [330, 750]) { c.beginPath(); c.arc(sx, 1400, 110, Math.PI, 0); c.fill(); c.fillRect(sx - 2, 1240, 4, 60); }
+  // main dome
+  c.beginPath(); c.moveTo(310, 1330); c.bezierCurveTo(300, 1100, 470, 1060, 540, 980); c.bezierCurveTo(610, 1060, 780, 1100, 770, 1330); c.closePath(); c.fill();
+  c.fillRect(530, 900, 20, 90); c.beginPath(); c.arc(540, 895, 14, 0, 7); c.fill();
+  c.fillRect(280, 1320, 520, 40);
+  c.fillRect(120, 1390, 840, 600);
+  // glowing windows
+  c.fillStyle = '#F7C873';
+  for (let i = 0; i < 7; i++) { archPath(c, 210 + i * 110, 1480, 1600, 50); c.fill(); }
+  for (let i = 0; i < 3; i++) { archPath(c, 450 + i * 90, 1200, 1290, 40); c.fill(); }
+  archPath(c, 540, 1660, 1990, 160); c.fill();
+}
+function drawDusk(c, t) {
+  const rise = eio(seg(t, 42, 49)) * 260;
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#231C45'); g.addColorStop(.35, '#4E3F78'); g.addColorStop(.58, P.lav); g.addColorStop(.75, '#C77D8E'); g.addColorStop(.88, P.coral); g.addColorStop(1, P.gold);
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // sun glow
+  const sg = c.createRadialGradient(540, 1500 + rise * .3, 0, 540, 1500 + rise * .3, 700); sg.addColorStop(0, 'rgba(255,214,140,.65)'); sg.addColorStop(1, 'rgba(255,214,140,0)'); c.fillStyle = sg; c.fillRect(0, 0, W, H);
+  // stars
+  for (const s of STARS) { const a = clamp((.4 + .6 * Math.sin(t * 2.2 + s.ph)) * seg(t, 42 + s.d * 3, 43 + s.d * 3)); if (a <= 0) continue; c.fillStyle = `rgba(255,248,225,${a})`; c.beginPath(); c.arc(s.x, s.y + rise * .5, s.s, 0, 7); c.fill(); }
+  // moon
+  c.save(); c.translate(850, 260 + rise * .5); c.shadowColor = 'rgba(255,240,190,.8)'; c.shadowBlur = 40;
+  c.beginPath(); c.arc(0, 0, 62, 0, 7); c.clip(); c.beginPath(); c.rect(-100, -100, 200, 200); c.arc(26, -16, 56, 0, 7); c.fillStyle = '#FFF3C8'; c.fill('evenodd'); c.restore();
+  c.save(); c.translate(0, rise); mosqueSil(c);
+  // kid silhouette looking up
+  c.fillStyle = '#1B1430'; c.beginPath(); c.arc(140, 1772 - Math.sin(t * 2) * 2, 30, 0, 7); c.fill(); c.beginPath(); c.moveTo(100, 1920); c.quadraticCurveTo(100, 1800, 140, 1800); c.quadraticCurveTo(180, 1800, 180, 1920); c.fill();
+  c.restore();
+  // light trail from dome
+  const tp = eio(seg(t, 42.8, 45.6));
+  if (tp > 0) {
+    const pts = []; for (let i = 0; i <= 80; i++) { const u = i / 80; pts.push({ x: 540 + Math.sin(u * 5.2 + .2) * 170 * u + u * 120, y: 975 + rise - u * (1100 + rise) }); }
+    const n = Math.floor(tp * 80);
+    c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round'; c.lineJoin = 'round';
+    for (const [w, a] of [[46, .12], [22, .3], [8, .95]]) { c.strokeStyle = `rgba(255,220,150,${a})`; c.lineWidth = w; c.beginPath(); for (let i = 0; i <= n; i++) c.lineTo(pts[i].x, pts[i].y); c.stroke(); }
+    const hd = pts[n]; const hg = c.createRadialGradient(hd.x, hd.y, 0, hd.x, hd.y, 90); hg.addColorStop(0, 'rgba(255,245,210,1)'); hg.addColorStop(1, 'rgba(255,245,210,0)'); c.fillStyle = hg; c.beginPath(); c.arc(hd.x, hd.y, 90, 0, 7); c.fill();
+    const r = rng(3); for (let i = 0; i < 40; i++) { const k = Math.floor(r() * n); const pp = pts[k]; const dd = (t * 40 + r() * 100) % 100; c.fillStyle = `rgba(255,225,160,${(1 - dd / 100) * .8})`; c.beginPath(); c.arc(pp.x + (r() - .5) * 60, pp.y - dd * .6, 3 + r() * 3, 0, 7); c.fill(); }
+    c.restore();
+  }
+}
+const SHARE_PTS = (() => { // points on share-arrow outline
+  const poly = [[-150, 60], [-150, -10], [-120, -70], [-60, -100], [20, -100], [20, -170], [160, -50], [20, 70], [20, 0], [-40, 0], [-100, 20], [-150, 60]];
+  const pts = []; for (let i = 0; i < poly.length - 1; i++) { const [a, b] = [poly[i], poly[i + 1]]; const L = Math.hypot(b[0] - a[0], b[1] - a[1]); const n = Math.ceil(L / 14); for (let k = 0; k < n; k++) pts.push([lerp(a[0], b[0], k / n), lerp(a[1], b[1], k / n)]); }
+  return { poly, pts };
+})();
+function sceneDusk(c, t) {
+  drawDusk(c, t);
+  // quote
+  if (t > 44.2 && t < 49.7) {
+    const out = 1 - seg(t, 49.1, 49.7);
+    const p1 = eout(seg(t, 44.2, 45.0)), p2 = eout(seg(t, 44.9, 45.7));
+    c.save(); c.globalAlpha = out;
+    const g = c.createRadialGradient(540, 700, 0, 540, 700, 560); g.addColorStop(0, 'rgba(20,14,40,.55)'); g.addColorStop(1, 'rgba(20,14,40,0)'); c.fillStyle = g; c.fillRect(0, 300, W, 800);
+    c.font = `800 104px ${FB}`;
+    c.save(); c.letterSpacing = `${(1 - p1) * 30}px`; rich(c, [{ s: 'Senyum itu ' }, { s: 'sedekah.', fill: P.gold }], 540, 640, { font: `800 104px ${FB}`, alpha: p1 }); c.restore();
+    c.save(); c.letterSpacing = `${(1 - p2) * 30}px`; rich(c, [{ s: 'Gelak biar ' }, { s: 'berpada.', fill: P.gold }, { s: ' 🤍' }], 540, 790, { font: `800 104px ${FB}`, alpha: p2 }); c.restore();
+    c.fillStyle = P.gold; rr(c, 610, 700, 340 * eout(seg(t, 45.6, 46.2)), 10, 5); c.fill(); rr(c, 560, 850, 330 * eout(seg(t, 46.3, 46.9)), 10, 5); c.fill();
+    c.restore();
+  }
+  if (t >= 49) cta(c, t);
+}
+const PK2 = { ...PK, x: 175, y: 2000, s: 1.35 };
+function cta(c, t) {
+  const dim = seg(t, 49, 49.7); c.fillStyle = `rgba(14,40,52,${.45 * dim})`; c.fillRect(0, 0, W, H);
+  // particles converge into share icon
+  const cx = 540, cy = 600, cp = eio(seg(t, 49.1, 50.4));
+  const r = rng(77);
+  c.save(); c.globalCompositeOperation = 'lighter';
+  SHARE_PTS.pts.forEach(([px, py], i) => { const sx = 540 + (r() - .5) * 900, sy = 200 + r() * 900; const x = lerp(sx, cx + px, cp), y = lerp(sy, cy + py, cp);
+    c.fillStyle = `rgba(255,220,150,${.9 * (1 - seg(t, 50.4, 50.9) * .7)})`; c.beginPath(); c.arc(x, y, 5, 0, 7); c.fill(); });
+  c.restore();
+  const ip = pop(t, 50.35, .5);
+  if (ip > 0) { c.save(); c.translate(cx, cy); const pl = 1 + .05 * Math.sin(t * 7); c.scale(ip * pl, ip * pl);
+    c.beginPath(); c.arc(0, -10, 230, 0, 7); c.fillStyle = 'rgba(232,181,71,.18)'; c.fill();
+    c.beginPath(); SHARE_PTS.poly.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.closePath();
+    c.fillStyle = P.gold; c.shadowColor = 'rgba(232,181,71,.9)'; c.shadowBlur = 40; c.fill(); c.restore(); }
+  // text
+  const p1 = eout(seg(t, 50.8, 51.3)), p2 = eout(seg(t, 51.1, 51.6));
+  txt(c, 'Ilmu yang dikongsi =', 540, 930 + (1 - p1) * 40, { font: `800 80px ${FB}`, fill: P.cream, alpha: p1, shadow: 'rgba(0,0,0,.4)' });
+  rich(c, [{ s: 'pahala berterusan', fill: P.gold, glow: 'rgba(232,181,71,.6)' }, { s: ' 🤍' }], 540, 1035 + (1 - p2) * 40, { font: `800 86px ${FB}`, alpha: p2 });
+  const p3 = eout(seg(t, 51.7, 52.2));
+  c.save(); c.globalAlpha = p3; c.fillStyle = 'rgba(255,255,255,.12)'; rr(c, 90, 1110, 900, 150, 30); c.fill(); c.restore();
+  txt(c, 'Tag kawan yang selalu tahan', 540, 1160, { font: `600 44px ${FP}`, fill: '#fff', alpha: p3 });
+  txt(c, 'gelak dalam masjid 😂', 540, 1218, { font: `600 44px ${FP}`, fill: '#fff', alpha: p3 });
+  // icons
+  const ic = [['💬', 'Komen'], ['🔁', 'Kongsi'], ['➕', 'Follow']];
+  ic.forEach(([e, l], i) => { const x = 300 + i * 240, p = pop(t, 52.5 + i * .3, .45); const beat = 1 + .08 * Math.max(0, Math.sin((t - 52.5) * Math.PI * 2 * 1.4 - i));
+    c.save(); c.translate(x, 1380); c.scale(p * beat, p * beat); c.fillStyle = P.cream; c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = 20; c.beginPath(); c.arc(0, 0, 72, 0, 7); c.fill(); c.shadowColor = 'transparent';
+    c.font = `64px ${FE}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(e, 0, 4); c.restore();
+    txt(c, l, x, 1490, { font: `800 40px ${FB}`, fill: P.cream, alpha: seg(t, 52.7 + i * .3, 53.0 + i * .3) }); });
+  txt(c, 'Follow untuk ilmu santai setiap minggu', 540, 1565, { font: `600 34px ${FP}`, fill: 'rgba(247,238,220,.85)', alpha: seg(t, 53.4, 53.8) });
+  // pakcik peek + wink
+  const pk = eout(seg(t, 50.0, 50.6)); const st = { expr: t > 51.0 && t < 51.6 ? 'wink' : 'smile', tilt: -.12 };
+  drawPerson(c, { ...PK2, y: lerp(2400, 2010, pk) }, t, st);
+  if (t > 51 && t < 51.8) { const sp = pop(t, 51.0, .3); c.save(); c.globalAlpha = 1 - seg(t, 51.5, 51.8); c.translate(320, 1600); c.scale(sp, sp); c.font = `60px ${FE}`; c.textAlign = 'center'; c.fillText('✨', 0, 0); c.restore(); }
+}
+
+// ======================================================================
+//  MASTER
+// ======================================================================
+function post(c, t) {
+  // vignette + grain
+  const v = c.createRadialGradient(540, 960, 600, 540, 960, 1250); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.32)'); c.fillStyle = v; c.fillRect(0, 0, W, H);
+  c.save(); c.globalAlpha = .05; c.globalCompositeOperation = 'overlay'; const fr = Math.floor(t * 30), r = rng(fr + 1); c.drawImage(grain, -r() * 100, -r() * 100, W + 200, H + 200); c.restore();
+}
+function render(t) {
+  const c = C; c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+  if (t < 17.6) sceneMosque(c, t);
+  if (t >= 17.0 && t < 42.0) {
+    if (t < 17.6) { OC.setTransform(1, 0, 0, 1, 0, 0); sceneIlmu(OC, t); const p = eio(seg(t, 17.0, 17.6)); c.save(); c.beginPath(); c.arc(540, 960, p * 1150, 0, 7); c.clip(); c.drawImage(off, 0, 0); c.restore();
+      c.save(); c.strokeStyle = `rgba(232,181,71,${1 - p})`; c.lineWidth = 14; c.beginPath(); c.arc(540, 960, p * 1150, 0, 7); c.stroke(); c.restore(); }
+    else sceneIlmu(c, t);
+  }
+  if (t >= 41.2) {
+    if (t < 42.0) { OC.setTransform(1, 0, 0, 1, 0, 0); sceneDusk(OC, t); c.save(); c.globalAlpha = eio(seg(t, 41.2, 42.0)); c.drawImage(off, 0, 0); c.restore(); }
+    else sceneDusk(c, t);
+  }
+  if (t >= 54.3) { OC.setTransform(1, 0, 0, 1, 0, 0); sceneMosque(OC, 0); c.save(); c.globalAlpha = eio(seg(t, 54.3, 54.97)); c.drawImage(off, 0, 0); c.restore(); }
+  post(c, t);
+}
+window.render = render; window.DUR = DUR;
+window.ready = Promise.all([
+  `800 40px "Baloo 2"`, `700 40px "Baloo 2"`, `600 40px Poppins`, `400 40px Poppins`, `700 40px Amiri`, `400 40px Amiri`, `40px "Noto Color Emoji"`
+].map(f => document.fonts.load(f, 'aﷺ😂'))).then(() => document.fonts.load('700 40px Amiri', 'تَبَسُّمُكَ'));
+</script></body></html>
