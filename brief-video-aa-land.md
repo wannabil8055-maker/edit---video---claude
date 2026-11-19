@@ -45,12 +45,17 @@ Masa di atas ialah panduan sahaja. Ikut isi percakapan sebenar, tetapi **jangan 
 - **B, "Ayat padu":** guna ayat paling kuat penyampai, contohnya ketika dia sebut harga atau "kito bina rumah atas tanah ni", sebagai buka video (cold open). Ambil dari mana-mana bahagian video, panjang 2–3 saat.
 
 **Teks atas skrin** (bold, besar, 2 baris, muncul perkataan demi perkataan):
-- Baris 1: **TANAH KOSONG NI…** (putih)
-- Baris 2: **JADI RUMAH MACAM NI!** (hijau `#2E9E3E`, diberi pop dan scale)
+- Baris 1: **RUMAH + TANAH 5,700 KP DI TUMPAT** (putih)
+- Baris 2: **RM420K SAHAJA?!** (hijau `#2E9E3E`, diberi pop dan scale)
 
-Pilihan ayat lain:
-- "BINA RUMAH ATAS TANAH SENDIRI. INI HARGANYA."
-- "RUMAH NI BOLEH SIAP ATAS TANAH NI?"
+Pilihan ayat lain (semua guna fakta dari skrip):
+- "5 LOT TANAH. 5 RUMAH. HARGA SEBELUM SIAP RM420K."
+- "JANGAN BELI LEPAS SIAP. HARGA BERBEZA!"
+- "TANAH KOSONG NI… JADI RUMAH MACAM NI!"
+
+⚠️ **Sahkan dulu sama ada RM420K termasuk tanah** sebelum guna ayat "RUMAH + TANAH".
+
+**Audio hook (cold open, disyorkan):** guna klip suara *"Siapa berminat, harga 420k"* (2 saat) sebagai bunyi pertama video, diikuti BOOM dan rumah jatuh.
 
 **SFX:**
 - Bunyi riser pendek (0.8 saat), kemudian **BOOM / impact** semasa flash.
@@ -146,6 +151,12 @@ Pilihan ayat lain:
 - **Teks selepas mendarat:** **"INSYAALLAH, INI RUMAH ANDA."** atau **"REKAAN RUMAH: [NAMA MODEL / JENIS]"**, dalam lower third hijau dan putih.
 - Pilihan tambahan: selepas hentakan, buat **slow push-in** ke rumah, dan letakkan label kecil "3 Bilik · 2 Bilik Air" (**isi ikut spesifikasi sebenar**).
 
+**VFX 2: "5 LOT, 5 RUMAH" (momen paling power).** Semasa penyampai sebut *"ada 5 lot tanah, akan bina lima rumah"*:
+1. Shot wide tanah. Garisan sempadan lot hijau dilukis atas tanah (track) dan membahagikan tapak kepada **5 lot**, dengan label LOT 1 hingga LOT 5.
+2. **Lima rumah jatuh gedebuk satu demi satu** mengikut rentak beat. Jarak setiap satu ±0.25 saat, dan setiap hentakan ada habuk dan gegaran kecil. Hentakan ke-5 paling kuat.
+3. Kaunter besar di atas skrin naik **1 → 2 → 3 → 4 → 5 RUMAH**.
+4. Selepas itu, label: **"Tanah ±5,700 kp / lot · Rumah ±1,500 kp"**.
+
 ---
 
 ## 6. LORONG LALUAN DAN PENCAWANG (0:22–0:38): mesti CLEAN dan PADU
@@ -158,9 +169,10 @@ Pilihan ayat lain:
 1. **Stabilkan dan luruskan** setiap shot lorong. Guna speed ramp 1.3x–1.5x supaya terasa macam "perjalanan" masuk ke tanah.
 2. **Grafik laluan beranimasi:** garisan hijau bercahaya (glow) dilukis atas lorong dari jalan utama ke tapak rumah, dengan anak panah bergerak. Track pada tanah supaya garisan melekat dan tidak terapung.
 3. **Label pin (callout)** dengan ikon kecil:
-   - 📍 **"LORONG MASUK"**: lebar lorong **[isi: _ kaki / meter]**
-   - ⚡ **"PENCAWANG TNB: ±[isi] meter dari tapak"**
-   - 🏠 **"TAPAK RUMAH"**
+   - 📍 **"BERDEKATAN JALAN BESAR NETING, TUMPAT"**: muncul semasa penyampai sebut lokasi. *(sahkan ejaan nama jalan/kampung)*
+   - ⚡ **"PENANDA: PENCAWANG ELEKTRIK"**: label dengan leader line menunjuk ke menara (C1 sekitar 0:17, C2 0:00, C5 sekitar 0:11)
+   - ↔️ **"JALAN KELUAR KIRI & KANAN"**: dua anak panah hijau beranimasi keluar ke kiri dan kanan dari lorong, semasa ayat *"ada jalan keluar kiri kanan"*
+   - 🏠 **"TAPAK 5 LOT RUMAH"**
 4. **Pencawang:** zoom perlahan atau punch-in ke menara. Label muncul dengan garisan penunjuk (leader line) dari menara, dan ikon kilat berdenyut perlahan.
 5. **Pilihan peta mini:** inset kecil di penjuru, iaitu peta ringkas (lukisan grafik, bukan Google Maps sebenar) yang menunjukkan jalan utama, lorong, tapak dan pencawang.
 6. **Peraturan "clean":**
@@ -174,13 +186,15 @@ Pilihan ayat lain:
 ## 7. HARGA DAN POIN UTAMA (0:38–0:55)
 - Kekalkan **hanya ayat harga dan fakta**. Buang semua soal jawab dengan jurukamera (rujuk 4.1).
 - Semasa harga disebut:
-  - **Kad harga besar** muncul dengan slam dan bunyi "cha-ching" atau ding, contohnya **"HARGA BINAAN: RM [isi]"**.
-  - Angka dikira naik dengan cepat (counter animation) dalam 0.6 saat.
-- Senarai poin, setiap satu muncul dengan tanda ✅ hijau:
-  - ✅ **[contoh: Termasuk kerja tanah / piling]**
-  - ✅ **[contoh: Saiz rumah _ kaki persegi]**
-  - ✅ **[contoh: Tempoh siap _ bulan]**
-  - ✅ **[contoh: Pakej / bayaran ansuran]**
+  - **Kad harga besar** muncul dengan slam dan bunyi "cha-ching": **"RM420,000"**, dengan label kecil di atasnya **"HARGA SEBELUM SIAP"**.
+  - Angka dikira naik dengan cepat (counter animation, RM0 → RM420,000) dalam 0.6 saat.
+- Senarai poin, setiap satu muncul dengan tanda ✅ hijau ikut ayat penyampai:
+  - ✅ **5 lot · 5 buah rumah**
+  - ✅ **Rumah ±1,500 kp · Tanah ±5,700 kp / lot**
+  - ✅ **Kami urus A–Z**
+  - ✅ **Tak perlu pening apa-apa**
+- Semasa *"Jangan beli time kita dah siap, harga berbeza"*: buat **glitch atau shake kecil**, dengan teks merah-putih **"⚠️ HARGA BERBEZA SELEPAS SIAP"**. Jangan tulis "harga naik" melainkan syarikat mengesahkannya.
+- Semasa *"naikkan tapak sikit-sikit"*: B-roll tanah dengan grafik lapisan tanah naik (animasi tanah ditambun), label **"Tapak akan ditambun berperingkat"**.
 - Semua angka dan fakta **mesti disahkan oleh tuan syarikat sebelum export**. Jangan teka dan jangan bulatkan.
 - Kalau ada syarat (contohnya "harga bergantung keadaan tanah"), letak dalam teks kecil di bawah kad harga.
 
@@ -274,3 +288,45 @@ Guna muzik **bebas hak cipta** atau dari library dalam app (TikTok / CapCut Comm
 - [ ] Audio bersih (tiada bunyi angin), voice -14 LUFS, muzik di-duck
 - [ ] Tempoh akhir 60–75 saat, 1080×1920, 30fps
 - [ ] End card dengan nombor telefon yang betul
+
+---
+
+## 13. SKRIP SEBENAR, SUBTITLE BAKU DAN TEKS ATAS SKRIN
+
+Skrip penyampai (loghat Kelantan) → subtitle Bahasa baku → grafik. Susunan di bawah ialah susunan **dalam video akhir**.
+
+| # | Ucapan asal (Kelantan) | Subtitle baku | Teks atas skrin / grafik |
+|---|---|---|---|
+| 1 | "Assalamualaikum, sahabat, adik-kakak, abe semua." | Assalamualaikum, sahabat, adik-adik, kakak-kakak dan abang-abang semua. | — |
+| 2 | "Ni abe nak tunjuk kawasan baru untuk bina rumah, kawasan sini." | Hari ini saya ingin tunjukkan kawasan baharu untuk membina rumah, di kawasan ini. | **VFX rumah jatuh gedebuk** (Seksyen 5) |
+| 3 | "Kawasan ni berdekatan jalan besar Neting, Tumpat." | Kawasan ini berdekatan jalan besar Neting, Tumpat. | 📍 BERDEKATAN JALAN BESAR NETING, TUMPAT |
+| 4 | "Pastu nak tahu lebih jelas, di pencawang elektrik, ada penanda." | Untuk lebih jelas, penandanya ialah pencawang elektrik. | ⚡ PENANDA: PENCAWANG ELEKTRIK |
+| 5 | "Ada jalan keluar kiri kanan." | Ada jalan keluar di sebelah kiri dan kanan. | ↔️ JALAN KELUAR KIRI & KANAN |
+| 6 | "Rumah kat sini ada 5 lot tanah, akan bina lima rumah." | Di sini ada 5 lot tanah, dan kami akan bina lima buah rumah. | **VFX 2: 5 rumah jatuh**, kaunter 1→5 |
+| 7 | "Keluasan rumah 1500 lebih kurang." | Keluasan rumah lebih kurang 1,500 kaki persegi. | RUMAH ±1,500 KP |
+| 8 | "Keluasan 1 lot tanah, 5700 sqft lebih kurang." | Keluasan satu lot tanah lebih kurang 5,700 kaki persegi. | TANAH ±5,700 KP / LOT |
+| 9 | "Siapa berminat, untuk harga, 420k." | Bagi yang berminat, harganya RM420,000. | **KAD HARGA RM420,000** |
+| 10 | "Kami akan uruskan A–Z." | Kami akan uruskan semuanya dari A hingga Z. | ✅ KAMI URUS A–Z |
+| 11 | "420k sebelum siap, tak perlu pening apa-apa dah." | RM420,000 sebelum siap, anda tidak perlu pening lagi. | HARGA SEBELUM SIAP |
+| 12 | "Jangan beli time kita dah siap. Harga berbeza." | Jangan tunggu rumah siap baru beli, harganya berbeza. | ⚠️ HARGA BERBEZA SELEPAS SIAP |
+| 13 | "Nanti kita dah naikkan tapak sikit-sikit, boleh mai beli." | Selepas kami tambun tapak sedikit demi sedikit, bolehlah datang beli. | Animasi tanah ditambun |
+| 14 | "So sekarang kita mencari buyer." | Jadi, sekarang kami sedang mencari pembeli. | → END CARD, "SEKARANG MENCARI PEMBELI" |
+
+**Nota untuk editor:**
+- Skrip yang diberi berakhir dengan "…". Kalau ada ayat selepas #14 dalam klip, kekalkan yang berkaitan (contohnya cara hubungi) dan buang selebihnya.
+- Bahagian tanya harga kepada jurukamera tidak termasuk dalam skrip di atas, jadi **semua yang tiada dalam jadual = buang**.
+- Kalau ada ayat yang diulang dalam beberapa klip (beberapa take), ambil **take yang paling lancar dan bertenaga**.
+- **Anggaran lokasi dalam footage** (dari semakan visual, mesti disahkan dengan mendengar):
+  - Ayat #1–#3: C1 (0:00–0:15)
+  - Ayat #4 (pencawang): C1 (0:17–0:26) / C2 (0:00–0:05) / C5 (sekitar 0:11)
+  - Ayat #5 (jalan keluar): C5 / C6
+  - Ayat #6–#14: C3 / C4 / C7 (shot statik)
+
+**Perkara yang mesti disahkan sebelum export:**
+1. Adakah RM420,000 **termasuk tanah** (pakej rumah + tanah)?
+2. "1,500" ialah keluasan binaan rumah dalam **kaki persegi**?
+3. Ejaan nama tempat: **"Neting, Tumpat"**.
+4. Nombor telefon di end card: 010-764 6392 · 016-696 6781.
+
+**Caption post (dikemas kini):**
+*"🏠 5 lot, 5 rumah berdekatan Jalan Besar Neting, Tumpat! Rumah ±1,500 kp atas tanah ±5,700 kp. Harga sebelum siap RM420K, kami urus A–Z. Jangan tunggu siap, harga berbeza! 📞 WhatsApp 010-7646392 / 016-6966781 #rumahtumpat #rumahkelantan #binarumah #AALand #hartanahkelantan"*
