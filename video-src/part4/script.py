@@ -1,0 +1,16 @@
+SEG = [
+ ("hook","narr","If you made du'a today... Allah chose you.","If you made du'a today…\nALLAH chose you.",0.3),
+ ("s1","narr","Billions of people. Millions of hearts asleep. But tonight, your hands went up.","Millions of hearts asleep…\nbut tonight, YOUR hands went up.",0.35),
+ ("s2","narr","Umar ibn al-Khattab once said: I don't worry about the answer. I worry about making du'a.","\"I don't worry about the answer.\nI worry about making DU'A.\"",0.2),
+ ("s2","narr","Because when du'a comes, the answer comes with it.","When du'a comes…\nthe ANSWER comes with it.",0.35),
+ ("s3","narr","Your Lord is too generous to return your raised hands empty.","Too generous to return\nyour hands EMPTY.",0.35),
+ ("s4","narr","So ask. Ask big.","So ask. ASK BIG.",0.15),
+ ("s4","narr","Not just exams, or money, or a car.","Not just exams…\nor money… or a car.",0.3),
+ ("s5","narr","Ask for Jannatul Firdaus. The Prophet, peace be upon him, said: when you ask Allah, ask for Firdaus. The highest level of Paradise.","Ask for JANNATUL FIRDAUS…\nthe highest level of Paradise.",0.35),
+ ("s6","narr","And every du'a is answered.","And every du'a is ANSWERED.",0.15),
+ ("s6","narr","He gives it now,","Given now…",0.1),
+ ("s6","narr","saves it for your hereafter,","…saved for your hereafter…",0.1),
+ ("s6","narr","or protects you from a harm you never saw.","…or a harm you never saw\nturned away.",0.35),
+ ("s7","narr","So tonight, in sujud, before Fajr, raise your hands.","Tonight, in sujud, before Fajr…\nraise your HANDS.",0.35),
+ ("cta","warm","Type one du'a in the comments. Someone will say Ameen for you.","Type one du'a in the comments.\nSomeone will say AMEEN for you.",1.8),
+]
