@@ -579,6 +579,8 @@ def main():
     scene.render.resolution_y = int(res * 16 / 9)
     scene.render.resolution_percentage = 100
     scene.cycles.samples = samples
+    if "--no-persist" in sys.argv:      # persistent data occasionally leaves stale shading
+        scene.render.use_persistent_data = False
     if "--frames" in sys.argv:
         frames = [int(x) for x in sys.argv[sys.argv.index("--frames") + 1:] if x.lstrip("-").isdigit()]
     else:
