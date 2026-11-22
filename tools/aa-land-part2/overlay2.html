@@ -1,0 +1,271 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:transparent;overflow:hidden}canvas{display:block}</style>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div style="display:none"><img id="house"><img id="logo"></div>
+<script>
+const W = 1080, H = 1920, cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const G = '#2E9E3E', G2 = '#3CCB5A', GD = '#1B5E20', WH = '#FFFFFF', DK = '#111111', RED = '#E53935', GOLD = '#FFC107';
+const IMG = id => document.getElementById(id);
+let TL = null, C = null, SEG = {};
+window.setTimeline = j => { TL = j; C = j.cues; j.segs.forEach(s => SEG[s.key] = s); };
+
+// ---------- helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x)), lerp = (a, b, x) => a + (b - a) * x;
+const ease = x => 0.5 - 0.5 * Math.cos(Math.PI * clamp(x)), easeOut = x => 1 - Math.pow(1 - clamp(x), 3), easeIn = x => Math.pow(clamp(x), 2.4);
+function backOut(x) { x = clamp(x); const c1 = 2.0, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+const pop = (lt, d = 0.22) => lt < 0 ? 0 : lerp(0.4, 1, backOut(lt / d));
+const win = (t, a, b, fi = 0.15, fo = 0.15) => clamp((t - a) / fi) * clamp((b - t) / fo);
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function txt(s, x, y, o = {}) {
+  ctx.save(); ctx.globalAlpha *= (o.alpha ?? 1); ctx.translate(x, y); const sc = o.scale ?? 1; ctx.scale(sc, sc); if (o.rot) ctx.rotate(o.rot);
+  ctx.font = o.font || '900 80px "Inter Display"'; ctx.textAlign = o.align || 'center'; ctx.textBaseline = 'middle';
+  if (o.ls) ctx.letterSpacing = o.ls + 'px';
+  if (o.shadow !== false) { ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = o.sb ?? 14; ctx.shadowOffsetY = 4; }
+  if (o.stroke) { ctx.lineJoin = 'round'; ctx.lineWidth = o.lw || 12; ctx.strokeStyle = o.stroke; ctx.strokeText(s, 0, 0); ctx.shadowColor = 'transparent'; }
+  ctx.fillStyle = o.fill || WH; ctx.fillText(s, 0, 0); ctx.restore();
+}
+function rr(x, y, w, h, r, fill, stroke, lw = 4) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (stroke) { ctx.lineWidth = lw; ctx.strokeStyle = stroke; ctx.stroke(); } }
+function cover(img, scale = 1, ox = 540, oy = 960) { ctx.save(); ctx.translate(ox, oy); ctx.scale(scale, scale); ctx.translate(-ox, -oy); ctx.drawImage(img, 0, 0, W, H); ctx.restore(); }
+function shakeOff(t, t0, amp = 22, dur = 0.5) { const u = t - t0; if (u < 0 || u > dur) return [0, 0]; const k = amp * (1 - u / dur); return [Math.sin(u * 95) * k, Math.cos(u * 80) * k * 0.7]; }
+function flash(t, t0, a = 0.85, d = 0.12) { const u = t - t0; if (u < 0 || u > d) return; ctx.fillStyle = `rgba(255,255,255,${a * (1 - u / d)})`; ctx.fillRect(0, 0, W, H); }
+function dust(t, t0, cx, cy, spread, n = 70, seed = 3, scale = 1) {
+  const u = t - t0; if (u < 0 || u > 1.6) return; const R = rng(seed);
+  for (let i = 0; i < n; i++) { const dir = R() < 0.5 ? -1 : 1, sp = (200 + R() * 700) * scale, up = (40 + R() * 260) * scale, r0 = (20 + R() * 50) * scale;
+    const x = cx + dir * (R() * spread + sp * easeOut(u / 1.2)), y = cy - up * easeOut(u / 1.0) + R() * 20 * scale; const r = r0 * (1 + u * 1.8); const a = 0.55 * (1 - u / 1.6) * (0.5 + R() * 0.5);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(196,170,130,${a})`); g.addColorStop(1, 'rgba(196,170,130,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+  for (let i = 0; i < n / 2; i++) { const dir = R() < 0.5 ? -1 : 1, vx = dir * (150 + R() * 500) * scale, vy = -(300 + R() * 600) * scale;
+    const x = cx + dir * R() * spread + vx * u, y = cy + vy * u + 1400 * scale * u * u; if (u > 0.9) continue; ctx.fillStyle = R() < 0.5 ? '#5b4a33' : '#3f6b2a'; ctx.fillRect(x, y, 6 * scale, 6 * scale); }
+}
+// house with fall + squash; returns nothing. bottom-centre anchor at (cx, by), width w
+function house(t, tLand, cx, by, w, fall = 0.42, alpha = 1) {
+  const img = IMG('house'); const h = w * img.height / img.width; const u = clamp((t - (tLand - fall)) / fall);
+  if (t < tLand - fall) return;
+  const dy = (1 - easeIn(u)) * -(by + 200); let sx = 1, sy = 1;
+  const v = t - tLand; if (v >= 0 && v < 0.25) { const k = Math.sin(clamp(v / 0.25) * Math.PI) * (1 - v / 0.25); sx = 1 + 0.05 * k; sy = 1 - 0.07 * k; }
+  // shadow
+  const sh = clamp(u * 1.2); ctx.save(); ctx.globalAlpha = 0.45 * sh * alpha; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(cx, by - 4, w * 0.5 * (0.5 + 0.5 * sh), 24 * w / 1000, 0, 0, 7); ctx.filter = 'blur(10px)'; ctx.fill(); ctx.restore();
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(cx, by + dy); ctx.scale(sx, sy);
+  if (u < 1) { ctx.globalAlpha = alpha * 0.35; ctx.drawImage(img, -w / 2, -h - 60 * (1 - u), w, h); ctx.globalAlpha = alpha; } // motion smear
+  ctx.drawImage(img, -w / 2, -h, w, h); ctx.restore();
+}
+function pinLabel(t, t0, t1, title, sub, y = 300, icon = 'pin') {
+  const a = win(t, t0, t1, 0.12, 0.2); if (a <= 0) return; const s = pop(t - t0, 0.25);
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(540, y); ctx.scale(s, s);
+  ctx.font = '900 54px "Inter Display"'; const tw = Math.max(ctx.measureText(title).width, sub ? (ctx.font = '700 38px Inter', ctx.measureText(sub).width) : 0);
+  const w = tw + 190, h = sub ? 170 : 120;
+  ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 24; rr(-w / 2, -h / 2, w, h, 26, WH); ctx.shadowColor = 'transparent';
+  rr(-w / 2, -h / 2, 16, h, [26, 0, 0, 26], G);
+  drawIcon(icon, -w / 2 + 80, 0, 1);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = DK; ctx.font = '900 54px "Inter Display"'; ctx.fillText(title, -w / 2 + 140, sub ? -28 : 2);
+  if (sub) { ctx.fillStyle = G; ctx.font = '700 38px Inter'; ctx.fillText(sub, -w / 2 + 140, 38); }
+  ctx.restore();
+}
+function drawIcon(k, x, y, s) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.fillStyle = G; ctx.strokeStyle = G; ctx.lineWidth = 7; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (k === 'pin') { ctx.beginPath(); ctx.arc(0, -12, 26, Math.PI, 0); ctx.quadraticCurveTo(26, 10, 0, 40); ctx.quadraticCurveTo(-26, 10, -26, -12); ctx.fill(); ctx.fillStyle = WH; ctx.beginPath(); ctx.arc(0, -12, 10, 0, 7); ctx.fill(); }
+  if (k === 'bolt') { ctx.fillStyle = GOLD; ctx.beginPath(); ctx.moveTo(8, -40); ctx.lineTo(-22, 6); ctx.lineTo(-2, 6); ctx.lineTo(-10, 40); ctx.lineTo(22, -8); ctx.lineTo(2, -8); ctx.closePath(); ctx.fill(); }
+  if (k === 'road') { ctx.beginPath(); ctx.moveTo(-14, 36); ctx.lineTo(-6, -36); ctx.moveTo(14, 36); ctx.lineTo(6, -36); ctx.stroke(); ctx.setLineDash([8, 8]); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 34); ctx.lineTo(0, -34); ctx.stroke(); }
+  if (k === 'house') { ctx.beginPath(); ctx.moveTo(-34, 0); ctx.lineTo(0, -32); ctx.lineTo(34, 0); ctx.stroke(); ctx.strokeRect(-24, 0, 48, 34); ctx.fillRect(-8, 12, 16, 22); }
+  if (k === 'land') { ctx.beginPath(); ctx.moveTo(-36, 30); ctx.lineTo(-18, -26); ctx.lineTo(36, -26); ctx.lineTo(18, 30); ctx.closePath(); ctx.stroke(); ctx.setLineDash([6, 7]); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-27, 2); ctx.lineTo(27, 2); ctx.stroke(); }
+  if (k === 'arrows') { ctx.beginPath(); ctx.moveTo(-36, 0); ctx.lineTo(36, 0); ctx.moveTo(-36, 0); ctx.lineTo(-20, -16); ctx.moveTo(-36, 0); ctx.lineTo(-20, 16); ctx.moveTo(36, 0); ctx.lineTo(20, -16); ctx.moveTo(36, 0); ctx.lineTo(20, 16); ctx.stroke(); }
+  if (k === 'check') { ctx.fillStyle = G; ctx.beginPath(); ctx.arc(0, 0, 30, 0, 7); ctx.fill(); ctx.strokeStyle = WH; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-4, 12); ctx.lineTo(16, -12); ctx.stroke(); }
+  ctx.restore();
+}
+function glowPath(pts, prog, w = 14, col = G2) {
+  if (prog <= 0) return; const P = []; for (let i = 0; i + 1 < pts.length; i++) for (let u = 0; u < 1; u += 0.05) P.push([lerp(pts[i][0], pts[i + 1][0], u), lerp(pts[i][1], pts[i + 1][1], u)]); P.push(pts[pts.length - 1]);
+  const n = Math.max(2, Math.floor(P.length * clamp(prog))); ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); P.slice(0, n).forEach((p, i) => i ? ctx.lineTo(...p) : ctx.moveTo(...p));
+  ctx.strokeStyle = 'rgba(60,203,90,0.35)'; ctx.lineWidth = w * 3.2; ctx.shadowColor = col; ctx.shadowBlur = 30; ctx.stroke();
+  ctx.shadowBlur = 0; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke(); ctx.strokeStyle = '#E8FFE8'; ctx.lineWidth = w * 0.3; ctx.stroke();
+  const hd = P[n - 1], pv = P[Math.max(0, n - 3)]; const an = Math.atan2(hd[1] - pv[1], hd[0] - pv[0]);
+  ctx.translate(...hd); ctx.rotate(an); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(w * 2.2, 0); ctx.lineTo(-w, -w * 1.8); ctx.lineTo(-w, w * 1.8); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function ring(t, t0, x, y, r = 70) { const u = t - t0; if (u < 0) return; for (let k = 0; k < 2; k++) { const v = ((u * 1.2 + k * 0.5) % 1); ctx.save(); ctx.globalAlpha = (1 - v) * 0.9; ctx.strokeStyle = GOLD; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(x, y, r * (0.6 + v), 0, 7); ctx.stroke(); ctx.restore(); } }
+
+// ---------- captions ----------
+const KEY = /^(JALAN|UTAMA|MENAMBUN|FOOTAGE|DEKAT|RM|NETING|TUMPAT|RUMAH|TANAH|PENCAWANG|ELEKTRIK|LIMA|LOT|PEMBELI|HARGA|SIAP|TAPAK|PM|A|Z|LALUAN|KIRI|BAHARU|SEBELUM|BERBEZA|BELI)/i;
+function chunks(sub) { const w = sub.split(' '); const out = []; let cur = []; for (const x of w) { cur.push(x); if (cur.length >= 3 || /[,.…?!]$/.test(x) && cur.length >= 2) { out.push(cur); cur = []; } } if (cur.length) out.push(cur); return out; }
+function captions(t) {
+  for (const s of TL.segs) { if (!s.sub || t < s.t0 || t >= s.t1) continue;
+    const cs = chunks(s.sub); const tot = cs.reduce((a, c) => a + c.join(' ').length, 0); let t0 = s.t0 + 0.03; const span = s.t1 - s.t0 - 0.08;
+    for (const c of cs) { const d = span * c.join(' ').length / tot; if (t >= t0 && t < t0 + d) {
+        const lt = t - t0; ctx.save(); ctx.font = '900 76px "Inter Display"'; const sp = ctx.measureText(' ').width; const ws = c.map(x => ctx.measureText(x.toUpperCase()).width);
+        const totw = ws.reduce((a, b) => a + b, 0) + sp * (c.length - 1); let x = 540 - totw / 2; const fit = Math.min(1, 960 / totw); const sc = fit * lerp(0.85, 1, backOut(lt / 0.14)); const y = 1330;
+        c.forEach((wd, i) => { const ta = t0 + d * i / c.length * 0.8; const active = t >= ta; const isKey = KEY.test(wd.replace(/[^A-Za-z0-9]/g, '')) || /\d/.test(wd);
+          txt(wd.toUpperCase(), 540 + (x + ws[i] / 2 - 540) * sc, y, { font: '900 76px "Inter Display"', scale: sc, fill: isKey ? G2 : WH, stroke: '#000', lw: 13, alpha: active ? 1 : 0.55 }); x += ws[i] + sp; });
+        ctx.restore(); }
+      t0 += d; } }
+}
+
+
+function logo(t) {
+  const s = SEG.logo, lt = t - s.t0, d = s.t1 - s.t0;
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0d3a16'); g.addColorStop(1, GD); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 2; for (let x = 0; x <= W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = 0; y <= H; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  const [sx, sy] = shakeOff(t, s.t0 + 1.0, 18, 0.4); ctx.save(); ctx.translate(sx, sy);
+  const z = 1 + 0.04 * lt; ctx.translate(540, 820); ctx.scale(z, z); ctx.translate(-540, -820);
+  // roof line draws
+  const p = easeOut(lt / 0.45); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = WH; ctx.lineWidth = 26;
+  const roof = [[200, 830], [540, 520], [880, 830]]; ctx.beginPath(); ctx.moveTo(...roof[0]);
+  if (p < 0.5) ctx.lineTo(lerp(roof[0][0], roof[1][0], p * 2), lerp(roof[0][1], roof[1][1], p * 2)); else { ctx.lineTo(...roof[1]); ctx.lineTo(lerp(roof[1][0], roof[2][0], (p - 0.5) * 2), lerp(roof[1][1], roof[2][1], (p - 0.5) * 2)); } ctx.stroke();
+  // walls rise
+  const wl = easeOut((lt - 0.3) / 0.4); if (wl > 0) { ctx.fillStyle = G2; ctx.fillRect(290, 1060 - 240 * wl, 500, 240 * wl);
+    const wi = clamp((lt - 0.6) / 0.2); ctx.fillStyle = `rgba(13,58,22,${wi})`; [[340, 880], [460, 880], [600, 880], [700, 880]].forEach(([x, y], i) => { if (i === 1) ctx.fillRect(x + 20, y + 40, 70, 140); else ctx.fillRect(x, y, 60, 60); }); }
+  // excavator arm sweeping in
+  const ex = easeOut((lt - 0.55) / 0.4); if (ex > 0) { ctx.save(); ctx.translate(lerp(1300, 860, ex), 640); ctx.rotate(lerp(0.6, 0, ex)); ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = 34; ctx.beginPath(); ctx.moveTo(140, 420); ctx.lineTo(60, 60); ctx.lineTo(-90, 10); ctx.stroke();
+    ctx.fillStyle = '#0a0a0a'; ctx.beginPath(); ctx.moveTo(-90, 10); ctx.lineTo(-150, 40); ctx.lineTo(-130, 110); ctx.lineTo(-70, 80); ctx.closePath(); ctx.fill(); ctx.restore(); }
+  ctx.restore();
+  if (lt > 0.95) { txt('AA LAND', 540 + sx, 1240 + sy, { font: '900 190px "Inter Display"', scale: pop(lt - 0.95, 0.25), stroke: '#0a0a0a', lw: 16, rot: -0.03 });
+    txt('SDN BHD', 540, 1370, { font: '800 64px Inter', fill: G2, ls: 18, alpha: clamp((lt - 1.15) / 0.2), shadow: true }); }
+  if (lt > 1.35) txt('BINA RUMAH ATAS TANAH ANDA', 540, 1470, { font: '700 44px Inter', alpha: clamp((lt - 1.35) / 0.25), ls: 4 });
+  if (lt > 1.5 && lt < 2.1) { const x = lerp(-300, 1400, (lt - 1.5) / 0.6); const gg = ctx.createLinearGradient(x - 120, 0, x + 120, 0); gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(0.5, 'rgba(255,255,255,0.45)'); gg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = gg; ctx.fillRect(0, 1120, W, 300); ctx.restore(); }
+  flash(t, s.t0 + 1.0, 0.5, 0.1);
+  if (lt > d - 0.25) { const u = (lt - (d - 0.25)) / 0.25; ctx.fillStyle = `rgba(0,0,0,${u * 0.0})`; } // hard cut out
+}
+
+function statCard(t, t0, t1, icon, label, value, y = 330) { const a = win(t, t0, t1, 0.12, 0.2); if (a <= 0) return; const s = pop(t - t0, 0.25);
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(540, y); ctx.scale(s, s); ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 30; rr(-400, -150, 800, 300, 34, WH); ctx.shadowColor = 'transparent';
+  rr(-400, -150, 800, 70, [34, 34, 0, 0], G); txt(label, 0, -115, { font: '900 44px "Inter Display"', ls: 6, shadow: false });
+  drawIcon(icon, -290, 50, 1.6); txt(value, 70, 50, { font: '900 120px "Inter Display"', fill: DK, shadow: false }); ctx.restore(); }
+function countNum(t, t0, v, d = 0.6) { return Math.round(v * easeOut((t - t0) / d)); }
+function fmt(n) { return n.toLocaleString('en-US'); }
+function priceBlock(t) {
+  const tp = C.price; if (t < tp - 0.1) return; const endT = SEG.pening.t1;
+  const a = win(t, tp - 0.1, endT, 0.1, 0.2); const s = pop(t - tp + 0.1, 0.28);
+  // shrink to header once the checklist starts
+  const k = ease((t - C.az + 0.3) / 0.35); const y = lerp(470, 330, k), sc = lerp(1, 0.78, k) * s;
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(540, y); ctx.scale(sc, sc); ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 40;
+  rr(-470, -230, 940, 460, 40, GD); ctx.shadowColor = 'transparent'; rr(-470, -230, 940, 460, 40, null, G2, 6);
+  rr(-260, -260, 520, 80, 40, GOLD); txt('HARGA SEBELUM SIAP', 0, -220, { font: '900 42px "Inter Display"', fill: DK, shadow: false });
+  txt('RUMAH + TANAH', 0, -110, { font: '800 52px Inter', ls: 6 });
+  txt('RM' + fmt(countNum(t, tp, 420000, 0.7)), 0, 40, { font: '900 170px "Inter Display"', fill: WH });
+  txt('5 lot sahaja · Tumpat', 0, 160, { font: '700 42px Inter', fill: G2 }); ctx.restore();
+  const items = [[C.az, 'KAMI URUS A–Z'], [C.pening, 'TAK PERLU PENING']];
+  items.forEach(([ti, label], i) => { if (t < ti - 0.1) return; const u = t - ti + 0.1; const x = lerp(-600, 0, easeOut(u / 0.3)); ctx.save(); ctx.globalAlpha = a; ctx.translate(x, 0);
+    rr(150, 620 + i * 150, 780, 120, 60, 'rgba(255,255,255,0.96)'); drawIcon('check', 220, 680 + i * 150, 1.1); txt(label, 290, 680 + i * 150, { font: '900 58px "Inter Display"', fill: DK, align: 'left', shadow: false }); ctx.restore(); });
+}
+function banner(t, t0, t1, l1, l2, col = RED, y = 360, glitch = false) { const a = win(t, t0, t1, 0.08, 0.2); if (a <= 0) return; const s = pop(t - t0, 0.22);
+  let gx = 0; if (glitch && t - t0 < 0.35) gx = (Math.floor((t - t0) * 60) % 2 ? 1 : -1) * 14 * (1 - (t - t0) / 0.35);
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(540 + gx, y); ctx.scale(s, s); ctx.rotate(-0.025); ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 30;
+  rr(-480, -120, 960, l2 ? 240 : 150, 24, col); ctx.shadowColor = 'transparent';
+  txt(l1, 0, l2 ? -48 : -45, { font: '900 82px "Inter Display"', shadow: false }); if (l2) txt(l2, 0, 55, { font: '900 62px "Inter Display"', fill: col === RED ? '#FFE082' : DK, shadow: false });
+  if (glitch && t - t0 < 0.35) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4; txt(l1, 10, -48, { font: '900 82px "Inter Display"', fill: '#00e5ff', shadow: false }); }
+  ctx.restore(); }
+
+function endCard(t) { const s = SEG.end, lt = t - s.t0;
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0d3a16'); g.addColorStop(1, GD); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 2; for (let x = 0; x <= W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); } for (let y = 0; y <= H; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  const [sx, sy] = shakeOff(t, s.t0 + 0.35, 16, 0.35); ctx.save(); ctx.translate(sx, sy);
+  // logo card
+  const ls = pop(lt - 0.05, 0.3); ctx.save(); ctx.translate(540, 330); ctx.scale(ls, ls); rr(-300, -190, 600, 390, 30, WH); ctx.drawImage(IMG('logo'), -280, -180, 560, 362); ctx.restore();
+  house(t, s.t0 + 0.35, 540, 1080, 900, 0.32); dust(t, s.t0 + 0.35, 540, 1075, 360, 60, 31, 0.9);
+  ctx.restore(); flash(t, s.t0 + 0.35, 0.5);
+  if (lt > 0.6) txt('5 LOT SAHAJA · RM420K', 540, 1180, { font: '900 74px "Inter Display"', fill: GOLD, scale: pop(lt - 0.6), stroke: '#000', lw: 10 });
+  if (lt > 0.9) { const p = 1 + 0.04 * Math.sin(lt * 7); ctx.save(); ctx.translate(540, 1330); ctx.scale(p * pop(lt - 0.9), p * pop(lt - 0.9)); rr(-430, -70, 860, 140, 70, '#25D366'); txt('WHATSAPP SEKARANG', 0, 2, { font: '900 66px "Inter Display"', shadow: false }); ctx.restore(); }
+  if (lt > 1.1) { txt('010-764 6392', 540, 1480, { font: '900 78px "Inter Display"', alpha: clamp((lt - 1.1) / 0.2) }); txt('016-696 6781', 540, 1570, { font: '900 78px "Inter Display"', alpha: clamp((lt - 1.25) / 0.2) }); }
+}
+function progress(t) { ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(0, 0, W, 10); ctx.fillStyle = G2; ctx.fillRect(0, 0, W * t / TL.total, 10); }
+
+
+// ---------- Part 2 scenes ----------
+const PIECES = () => TL.pieces;
+function lightLeak(t, t0, d = 0.45, seed = 1) { const u = (t - t0) / d; if (u < 0 || u > 1) return; const R = rng(seed);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 3; i++) { const x = lerp(-200, 1300, u) + (R() - 0.5) * 500, y = R() * H, r = 500 + R() * 400; const a = 0.55 * Math.sin(Math.PI * u);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(255,170,60,${a})`); g.addColorStop(0.5, `rgba(255,90,30,${a * 0.4})`); g.addColorStop(1, 'rgba(255,90,30,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+  ctx.restore(); }
+function cutFX(t, seg) { PIECES().forEach((p, i) => { if (p.seg !== seg || !p.impact) return; flash(t, p.t0, 0.55, 0.08); if (i % 2 === 0) lightLeak(t, p.t0, 0.45, i + 3); }); }
+function pill(text, x, y, bg, fg = DK, size = 40, a = 1, s = 1) { ctx.save(); ctx.globalAlpha *= a; ctx.translate(x, y); ctx.scale(s, s); ctx.font = `900 ${size}px "Inter Display"`; const w = ctx.measureText(text).width + size * 1.2;
+  rr(-w / 2, -size * 0.8, w, size * 1.6, size * 0.8, bg); txt(text, 0, 2, { font: `900 ${size}px "Inter Display"`, fill: fg, shadow: false }); ctx.restore(); }
+function viewfinder(t, a) { if (a <= 0) return; ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 6;
+  const m = 60, L = 90; [[m, m + 60, 1, 1], [W - m, m + 60, -1, 1], [m, H - 300, 1, -1], [W - m, H - 300, -1, -1]].forEach(([x, y, sx, sy]) => { ctx.beginPath(); ctx.moveTo(x, y + sy * L); ctx.lineTo(x, y); ctx.lineTo(x + sx * L, y); ctx.stroke(); });
+  if (Math.floor(t * 2) % 2 === 0) { ctx.fillStyle = RED; ctx.beginPath(); ctx.arc(m + 40, m + 115, 14, 0, 7); ctx.fill(); }
+  txt('REC', m + 100, m + 116, { font: '800 38px Inter', align: 'left' });
+  const tc = Math.max(0, t - SEG.montage.t0) + 12.4; const ff = Math.floor((tc % 1) * 30);
+  txt(`00:00:${String(Math.floor(tc)).padStart(2, '0')}:${String(ff).padStart(2, '0')}`, W - m - 20, m + 116, { font: '700 34px "JetBrains Mono"', align: 'right' });
+  txt('SITE UPDATE · NETING, TUMPAT', 540, H - 330, { font: '800 32px Inter', ls: 4, alpha: 0.9 });
+  ctx.restore(); }
+function lowerThird(t, t0, t1, text) { const a = win(t, t0 + 0.05, t1, 0.08, 0.12); if (a <= 0 || !text) return; const x = lerp(-900, 0, easeOut((t - t0 - 0.05) / 0.25));
+  ctx.save(); ctx.globalAlpha = a; ctx.translate(x, 0); ctx.font = '900 54px "Inter Display"'; const w = ctx.measureText(text).width + 90;
+  rr(50, 1110, w, 100, 14, 'rgba(255,255,255,0.96)'); rr(50, 1110, 16, 100, [14, 0, 0, 14], G); txt(text, 90, 1162, { font: '900 54px "Inter Display"', fill: DK, align: 'left', shadow: false }); ctx.restore(); }
+function miniMap(t, a, prog, carT, hiMain) { if (a <= 0) return; ctx.save(); ctx.globalAlpha = a; ctx.translate(W - 330, 560); const s = pop(a < 1 ? a * 0.22 : 1, 0.22); ctx.scale(s, s);
+  rr(-250, -250, 500, 500, 30, 'rgba(10,30,15,0.85)', 'rgba(255,255,255,0.6)', 3);
+  ctx.fillStyle = hiMain ? '#8a8a8a' : '#5c5c5c'; ctx.fillRect(-250, 150, 500, 60); ctx.setLineDash([22, 16]); ctx.strokeStyle = WH; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-250, 180); ctx.lineTo(250, 180); ctx.stroke(); ctx.setLineDash([]);
+  for (let k = 0; k < 3; k++) { const x = ((carT * 160 + k * 180) % 560) - 280; ctx.fillStyle = [GOLD, RED, WH][k]; rr(x, k % 2 ? 182 : 158, 40, 20, 5, ctx.fillStyle); }
+  txt('JALAN UTAMA', 0, 235, { font: '800 26px Inter', alpha: 0.9, shadow: false });
+  ctx.lineCap = 'round'; const pts = [[-60, 150], [-60, 40], [10, -40], [10, -130]]; const n = clamp(prog);
+  const tot = 3; const seg = Math.min(tot - 1, Math.floor(n * tot)); const fr = n * tot - seg;
+  ctx.strokeStyle = G2; ctx.lineWidth = 26; ctx.shadowColor = G2; ctx.shadowBlur = 20; ctx.beginPath(); ctx.moveTo(...pts[0]);
+  for (let i = 1; i <= seg; i++) ctx.lineTo(...pts[i]); if (n > 0) ctx.lineTo(lerp(pts[seg][0], pts[seg + 1][0], fr), lerp(pts[seg][1], pts[seg + 1][1], fr)); ctx.stroke(); ctx.shadowBlur = 0;
+  if (n > 0.95) { drawIcon('house', 10, -175, 1.6); }
+  txt('JALAN MASUK', 120, 40, { font: '800 26px Inter', fill: G2, alpha: clamp(n * 3), shadow: false }); txt('TAPAK', 10, -235, { font: '900 28px "Inter Display"', alpha: n > 0.95 ? 1 : 0, shadow: false });
+  ctx.restore(); }
+function hook2(t) { cutFX(t, 'hook'); const hp = PIECES().filter(p => p.seg === 'hook');
+  if (t < hp[1].t0) txt('PART 2', 540, 960, { font: '900 230px "Inter Display"', fill: GOLD, scale: pop(t, 0.18) * (1 + 0.15 * t), stroke: '#000', lw: 20, rot: -0.04 });
+  else pill('PART 2', 150, 110, GOLD, DK, 44, 1, pop(t - hp[1].t0, 0.2));
+  const c2 = hp[1].t0, c3 = hp[2].t0, vo = TL.hookVO;
+  if (t > c2) { const [a, b] = shakeOff(t, c2, 12, 0.3); txt('JALAN MASUK', 540 + a, 330 + b, { font: '900 120px "Inter Display"', scale: pop(t - c2, 0.2), stroke: '#000', lw: 16 }); }
+  if (t > c3) txt('SEDANG DIBINA!', 540, 460, { font: '900 104px "Inter Display"', fill: G2, scale: pop(t - c3, 0.2), stroke: '#000', lw: 14 });
+  if (t > vo) { const [a, b] = shakeOff(t, vo + 0.5, 16, 0.35); txt('KASI LUNCUR!', 540 + a, 1400 + b, { font: '900 150px "Inter Display"', fill: GOLD, scale: pop(t - vo, 0.24), stroke: '#000', lw: 18, rot: -0.05 }); } }
+function logo2(t) { logo(t); const lt = t - SEG.logo.t0; if (lt > 1.6) pill('PART 2', 540, 1580, GOLD, DK, 46, clamp((lt - 1.6) / 0.15), pop(lt - 1.6, 0.2)); }
+function recap(t) { const s = SEG.recap, lt = t - s.t0; const a = win(t, s.t0, s.t1, 0.15, 0.2);
+  pill('RECAP PART 1', 540, 470, G, WH, 46, a, pop(lt, 0.2));
+  const rows = [['house', '5 LOT · RUMAH + TANAH'], ['rm', 'RM420K · SEBELUM SIAP'], ['pin', 'NETING, TUMPAT']];
+  rows.forEach(([ic, tx], i) => { const u = lt - 0.25 - i * 0.22; if (u < 0) return; const x = lerp(-900, 0, easeOut(u / 0.3)); ctx.save(); ctx.globalAlpha = a; ctx.translate(x, 0);
+    rr(110, 600 + i * 170, 860, 140, 30, 'rgba(255,255,255,0.97)');
+    if (ic === 'rm') { ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(200, 670 + i * 170, 40, 0, 7); ctx.fill(); txt('RM', 200, 672 + i * 170, { font: '900 30px "Inter Display"', fill: DK, shadow: false }); } else drawIcon(ic, 200, 672 + i * 170, 1.3);
+    txt(tx, 270, 672 + i * 170, { font: '900 56px "Inter Display"', fill: DK, align: 'left', shadow: false }); ctx.restore(); }); }
+function voiceScenes(t, k) { const s = SEG[k];
+  const mapIn = SEG.v2.t0, mapOut = SEG.v5.t0 + 0.2; const ma = win(t, mapIn, mapOut, 0.2, 0.25);
+  miniMap(t, ma, clamp((t - SEG.v2.t0) / (SEG.v3.t1 - SEG.v2.t0)), t, k === 'v4');
+  if (k === 'v1') pinLabel(t, s.t0 + 0.1, s.t1, 'PART 2: JALAN MASUK', 'Tapak 5 lot · Neting, Tumpat', 300, 'road');
+  if (k === 'v2') pinLabel(t, s.t0 + 0.1, s.t1, 'JALAN MASUK BAHARU', 'Sampai ke hujung tapak', 300, 'road');
+  if (k === 'v3') pinLabel(t, s.t0 + 0.05, s.t1, 'INILAH JALANNYA', 'Proses menambun bermula', 300, 'pin');
+  if (k === 'v4') pinLabel(t, s.t0 + 0.05, s.t1, 'JALAN UTAMA', 'Kereta lalu-lalang', 300, 'arrows');
+  if (k === 'v5') { const lt = t - s.t0; ctx.save(); ctx.globalAlpha = win(t, s.t0, s.t1 + 0.3, 0.08, 0.2); ctx.translate(540, 420); ctx.scale(pop(lt, 0.24), pop(lt, 0.24)); ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 30;
+    rr(-430, -110, 860, 220, 40, G); ctx.shadowColor = 'transparent'; drawIcon('check', -330, 0, 1.6); ctx.restore(); ctx.save(); ctx.globalAlpha = win(t, s.t0, s.t1 + 0.3, 0.08, 0.2);
+    txt('DEKAT JALAN UTAMA', 600, 420, { font: '900 60px "Inter Display"', scale: pop(lt, 0.24), shadow: false }); ctx.restore(); }
+  if (k === 'v6') { const lt = t - s.t0; banner(t, s.t0 + 0.1, s.t1, 'FOOTAGE', 'KERJA DI TAPAK ⬇', G, 380, false); } }
+function tanah(t) { const s = SEG.tanah, lt = t - s.t0, B = TL.beat;
+  const lp = easeOut(lt / 0.6); ctx.save(); ctx.globalAlpha = lp * win(t, s.t0, s.t1, 0.1, 0.3); ctx.lineWidth = 5; ctx.strokeStyle = G2; ctx.setLineDash([16, 10]);
+  [125, 332, 540, 748, 955].forEach((x, i) => { const hl = lt > 0.3 + i * 0.12; ctx.fillStyle = hl ? 'rgba(60,203,90,0.22)' : 'rgba(60,203,90,0)'; ctx.beginPath(); ctx.moveTo(x - 90, 1215); ctx.lineTo(x + 90, 1215); ctx.lineTo(x + 102, 1420); ctx.lineTo(x - 102, 1420); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (hl) txt(`LOT ${i + 1}`, x, 1318, { font: '900 34px "Inter Display"', stroke: '#000', lw: 6 }); }); ctx.restore();
+  const cards = [[0, 'KAWASAN TAPAK', '5 LOT', 'land'], [4 * B, 'KELUASAN TANAH', '±5,700 KP', 'land'], [7 * B, 'KELUASAN RUMAH', '±1,500 KP', 'house']];
+  cards.forEach(([o, l, v, ic], i) => { const t0 = s.t0 + o, t1 = i < 2 ? s.t0 + cards[i + 1][0] : s.t0 + 10 * B; statCard(t, t0, t1, ic, l, v, 360); });
+  const ct = s.t0 + 10 * B; if (t > ct - 0.05) { const items = ['DEKAT JALAN UTAMA', 'AKSES LORI & KERETA', 'TAPAK SEDANG DITAMBUN'];
+    pill('POTENSI TAPAK', 540, 250, GOLD, DK, 46, win(t, ct, s.t1 + 0.2, 0.1, 0.2), pop(t - ct, 0.2));
+    items.forEach((x, i) => { const u = t - ct - i * B * 0.5; if (u < 0) return; const xx = lerp(-900, 0, easeOut(u / 0.25)); ctx.save(); ctx.globalAlpha = win(t, ct, s.t1 + 0.2, 0.1, 0.2); ctx.translate(xx, 0);
+      rr(130, 330 + i * 140, 820, 110, 55, 'rgba(255,255,255,0.96)'); drawIcon('check', 200, 385 + i * 140, 1.0); txt(x, 260, 387 + i * 140, { font: '900 52px "Inter Display"', fill: DK, align: 'left', shadow: false }); ctx.restore(); }); } }
+function tanahStrip(t) { const s = SEG.tanah; const a = win(t, s.t0 + 0.2, s.t1, 0.2, 0.2); txt('TAPAK PROJEK AA LAND', 540, 1500, { font: '900 64px "Inter Display"', alpha: a, stroke: '#000', lw: 10 }); txt('Neting, Tumpat · Kelantan', 540, 1580, { font: '700 44px Inter', fill: G2, alpha: a, stroke: '#000', lw: 8 }); }
+function montage(t) { const s = SEG.montage; viewfinder(t, win(t, s.t0, SEG.siap.t1, 0.1, 0.15)); cutFX(t, 'montage');
+  PIECES().filter(p => p.seg === 'montage').forEach(p => { if (t < p.t0 || t >= p.t0 + p.d) return; lowerThird(t, p.t0, p.t0 + p.d + (p.label ? 0.6 : 0), p.label);
+    if (p.speed > 1.01) pill(`▶▶ x${p.speed.toFixed(1)}`, 900, 300, 'rgba(0,0,0,0.6)', WH, 36);
+    if (p.slow) pill('SLOW-MO', 900, 300, 'rgba(0,0,0,0.6)', GOLD, 36); });
+  // keep previous label visible across short unlabeled shots
+  const prev = PIECES().filter(p => p.seg === 'montage' && p.label && t >= p.t0 && t < p.t0 + p.d + TL.beat * 2);
+  prev.forEach(p => { if (!(t >= p.t0 && t < p.t0 + p.d)) lowerThird(t, p.t0, p.t0 + p.d + TL.beat * 2, p.label); }); }
+function split(t) { const s = SEG.split, lt = t - s.t0; const w = easeOut(lt / 0.35);
+  ctx.fillStyle = WH; ctx.fillRect(0, 954, W * w, 12); ctx.save(); ctx.shadowColor = G2; ctx.shadowBlur = 25; ctx.fillStyle = G2; ctx.fillRect(0, 957, W * w, 6); ctx.restore();
+  pill('SEBELUM', 200, 120, 'rgba(0,0,0,0.7)', WH, 50, clamp(lt / 0.2), pop(lt, 0.2)); pill('SELEPAS', 200, 1040, G, WH, 50, clamp((lt - 0.35) / 0.2), pop(lt - 0.35, 0.2));
+  txt('LALUAN RUMPUT', 540, 860, { font: '900 64px "Inter Display"', alpha: clamp((lt - 0.2) / 0.2), stroke: '#000', lw: 10 });
+  txt('JALAN TANAH MERAH', 540, 1780, { font: '900 64px "Inter Display"', fill: G2, alpha: clamp((lt - 0.55) / 0.2), stroke: '#000', lw: 10 });
+  ctx.save(); ctx.translate(540, 960); const vs = pop(lt - 0.3, 0.2); ctx.scale(vs, vs); ctx.fillStyle = GOLD; ctx.beginPath(); ctx.arc(0, 0, 70, 0, 7); ctx.fill(); txt('VS', 0, 4, { font: '900 64px "Inter Display"', fill: DK, shadow: false }); ctx.restore(); }
+function siap(t) { const s = SEG.siap, lt = t - s.t0; cutFX(t, 'siap'); viewfinder(t, win(t, s.t0, s.t1, 0.1, 0.15));
+  banner(t, s.t0 + 0.1, s.t1, 'JALAN MASUK', 'HAMPIR SIAP ✅', G, 420, false);
+  if (lt > 0.4 && lt < 1.2) { const x = lerp(-300, 1400, (lt - 0.4) / 0.8); const gg = ctx.createLinearGradient(x - 150, 0, x + 150, 0); gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(0.5, 'rgba(255,255,255,0.35)'); gg.addColorStop(1, 'rgba(255,255,255,0)'); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = gg; ctx.fillRect(0, 280, W, 280); ctx.restore(); } }
+function end2(t) { endCard(t); const lt = t - SEG.end.t0; pill('PART 3 AKAN DATANG', 540, 90, GOLD, DK, 40, clamp((lt - 0.2) / 0.2), pop(lt - 0.2, 0.2));
+  if (lt > 1.5) txt('FOLLOW UNTUK UPDATE PROJEK', 540, 1690, { font: '800 44px Inter', alpha: clamp((lt - 1.5) / 0.3) }); }
+function render(t) {
+  ctx.clearRect(0, 0, W, H); const k = TL.segs.find(s => t >= s.t0 && t < s.t1)?.key || 'end';
+  if (k === 'hook') hook2(t); else if (k === 'logo') logo2(t); else if (k === 'end') end2(t); else if (k === 'recap') recap(t);
+  else if (k[0] === 'v') voiceScenes(t, k); else if (k === 'tanah') { tanah(t); tanahStrip(t); } else if (k === 'montage') montage(t); else if (k === 'split') split(t); else if (k === 'siap') siap(t);
+  if (k[0] === 'v') captions(t);
+  if (k !== 'logo') progress(t);
+}
+window.render = render;
+window.ready = () => Promise.all([...document.images].filter(i => i.src).map(i => i.decode()));
+</script>
+</body></html>
