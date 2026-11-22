@@ -16,7 +16,8 @@ import house3d as H
 import house3d_real as R
 
 random.seed(11)
-LOT_W = 26.0                                   # plot width (m), matches the boundary walls
+LOT_W = 16.0                                   # plot 16 m x 29 m = ~5,000 sq ft
+HALF = LOT_W / 2
 N_LOTS = 5
 OFFS = [(i - (N_LOTS - 1) / 2) * LOT_W for i in range(N_LOTS)]   # x offset of each plot
 DELAY = [0.0, 0.35, 0.7, 1.05, 1.4]            # build start per plot (s), left -> right
@@ -27,8 +28,34 @@ col = H.col
 # ---------------------------------------------------------------- clear what does not fit the row
 for o in list(col.objects):
     n = o.name
-    if n.startswith("far_tree") or (n.startswith("tree") and (abs(o.location.x) > 12.5 or o.location.y > 12.5)):
+    if n.startswith("far_tree") or (n.startswith("tree") and (abs(o.location.x) > 7.0 or o.location.y > 12.5)):
         bpy.data.objects.remove(o, do_unlink=True)
+    elif n.startswith("fern") and abs(o.location.x) > 9:
+        o.location.x = 6.8 if o.location.x > 0 else -6.8
+        o.location.y = -18.0
+
+# ---------------------------------------------------------------- narrower plot: boundary walls at +-HALF
+for p in R.bw_parts:
+    bpy.data.objects.remove(p, do_unlink=True)
+R.bw_parts.clear()
+for (x0, y0, x1, y1) in [(-HALF, 13, HALF, 13.2), (-HALF, -16, -HALF + 0.2, 13), (HALF - 0.2, -16, HALF, 13)]:
+    o = H.box("bwall", (x0 + x1) / 2, (y0 + y1) / 2, 0, abs(x1 - x0), abs(y1 - y0), 1.6, H.M_WALL)
+    c = H.box("bcap", (x0 + x1) / 2, (y0 + y1) / 2, 1.6, abs(x1 - x0) + 0.08, abs(y1 - y0) + 0.08, 0.1, H.M_NAVY)
+    R.autouv(o)
+    R.bw_parts += [o, c]
+for x in range(-6, 7, 3):
+    p = H.box("bpost", x, 13.1, 0, 0.3, 0.3, 1.85, H.M_WALL)
+    R.autouv(p)
+    R.bw_parts.append(p)
+# lawn: squeeze the mesh to the plot width and re-mask the grass scatter
+lawn = R.lawn
+for v in lawn.data.vertices:
+    v.co.x *= (LOT_W + 0.4) / 30.0
+R.autouv(lawn)
+for v in lawn.data.vertices:
+    w = lawn.matrix_world @ v.co
+    if abs(w.x) > HALF - 0.35:
+        R.dens.data[v.index].value = 0.0
 
 # ---------------------------------------------------------------- copy the plot for the other lots
 skip = {"ground"}
@@ -71,7 +98,7 @@ for k in range(700):
     while True:
         x = random.uniform(-220, 220)
         y = random.uniform(-220, 220)
-        if not (-75 < x < 75 and -36 < y < 18):
+        if not (-48 < x < 48 and -36 < y < 18):
             break
     a = random.choice(["island_tree_01", "island_tree_02", "island_tree_03", "tree_small_02"])
     R.instance(R.trees[a], (x, y, 0), random.uniform(0, 6.28), random.uniform(2.0, 3.2), "far_tree")
@@ -84,10 +111,10 @@ for k in range(40):                            # a few trees across the road
 # dense tropical tree belt hugging the estate so the bare ground plane is not seen
 for k in range(420):
     while True:
-        x = random.uniform(-110, 110)
+        x = random.uniform(-80, 80)
         y = random.uniform(-70, 60)
-        inside = -70 < x < 70 and -33 < y < 15
-        if not inside and abs(x) < 70 + 30 and -33 - 30 < y < 15 + 30:
+        inside = -44 < x < 44 and -33 < y < 15
+        if not inside and abs(x) < 44 + 30 and -33 - 30 < y < 15 + 30:
             break
     a = random.choice(["island_tree_01", "island_tree_02", "island_tree_03", "tree_small_02"])
     R.instance(R.trees[a], (x, y, 0), random.uniform(0, 6.28), random.uniform(1.6, 2.6), "far_tree")
@@ -112,11 +139,11 @@ def lerp(a, b, k):
 
 
 CAM = [  # time, azimuth deg (0 = front/road side), polar deg (0 = down), distance, target x, target z
-    (0.0, 90, 2, 92, 0, 0),
-    (2.0, 88, 8, 88, 0, 0),
-    (5.0, 70, 40, 78, -4, 1),
-    (8.5, 62, 62, 80, 0, 2),
-    (11.5, 59, 77, 58, 12, 2.5),
+    (0.0, 90, 2, 62, 0, 0),
+    (2.0, 88, 8, 58, 0, 0),
+    (5.0, 70, 40, 52, -3, 1),
+    (8.5, 62, 62, 62, -2, 2),
+    (11.5, 56, 75, 60, 12, 2.5),
 ]
 
 

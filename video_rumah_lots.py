@@ -20,7 +20,7 @@ L3D = 11.5
 T3D = 2.5
 DROP = T3D + 6.4 + 0.3636
 BEAT = 0.5
-DUR = DROP + 19 * BEAT + 4.0
+DUR = DROP + 29 * BEAT + 4.0
 N = int(DUR * FPS)
 SR = 44100
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -60,7 +60,7 @@ def frame3d(t):
     return im.copy()
 
 
-SPEC_CHIPS = [("SETIAP UNIT:", 7), ("4 BILIK TIDUR", 7.5), ("3 BILIK AIR", 8), ("1,440 KAKI PERSEGI", 8.5)]
+SPEC_CHIPS = [("TANAH 5,000 KAKI PERSEGI", 7), ("4 BILIK TIDUR", 7.5), ("3 BILIK AIR", 8), ("BINAAN 1,440 KAKI PERSEGI", 8.5)]
 
 
 def scene_3d(t):
@@ -79,7 +79,7 @@ def scene_3d(t):
     # 1. five empty plots on the land
     fo = clamp((lt - 1.9) / 0.3)
     pop(c, word_img("5 LOT TANAH", 110, WHITE), W / 2, 330, lt - 0.25, fade_out=fo)
-    pop(c, word_img("SEBARIS TEPI JALAN", 70, INK, box=YELLOW), W / 2, 460, lt - 0.55, fade_out=fo)
+    pop(c, word_img("5,000 KAKI PERSEGI / LOT", 66, INK, box=YELLOW), W / 2, 460, lt - 0.55, fade_out=fo)
     # 2. walls rising, plot after plot
     fo = clamp((lt - 5.2) / 0.3)
     pop(c, word_img("5 UNIT", 140, WHITE), W / 2, 330, lt - 2.1, fade_out=fo)
@@ -110,7 +110,35 @@ CUTS = [
     (beat_at(13), beat_at(16), kiri, 3.25, 3.35, (260, 330), (780, 340), "ANJUNG LUAS"),
     (beat_at(16), beat_at(19), kanan, 3.3, 3.2, (820, 330), (300, 330), "5 LOT SAHAJA"),
 ]
-CTA_START = beat_at(19)
+PRICE_START = beat_at(19)
+CTA_START = beat_at(29)
+RED = (230, 57, 70)
+
+
+def scene_price(t):
+    """Price card: normal price struck out -> first-buyer rebate -> price after rebate."""
+    lt = t - PRICE_START
+    k = lt / (CTA_START - PRICE_START)
+    fr = v2.fullbleed(kanan, 3.0 + 0.25 * k, 560, 340)
+    fr = fr.filter(ImageFilter.GaussianBlur(10))
+    fr = Image.fromarray((np.asarray(v2.grade(fr, t, leak=0.3), np.float32) * 0.42).astype(np.uint8))
+    fr = flash(fr, 0.6 * (1 - lt / 0.15))
+    c = fr.convert("RGBA")
+    pop(c, word_img("HARGA BIASA", 66, WHITE), W / 2, 430, lt - 0.1)
+    old = word_img("RM419,000", 150, WHITE)
+    pop(c, old, W / 2, 570, lt - 0.3)
+    ks = ease(clamp((lt - 1.1) / 0.3))
+    if ks > 0:                                  # red strike-through
+        d = ImageDraw.Draw(c)
+        x0 = W / 2 - old.width / 2 + 20
+        x1 = x0 + (old.width - 40) * ks
+        d.line([(x0, 585), (x1, 555)], fill=RED + (255,), width=14)
+    pop(c, word_img("PEMBELI RUMAH PERTAMA", 62, WHITE), W / 2, 800, lt - 1.5)
+    pop(c, word_img("REBATE RM20,000", 100, INK, box=YELLOW, pad=(34, 12)), W / 2, 940, lt - 1.75)
+    pop(c, word_img("HARGA SELEPAS REBATE", 58, WHITE), W / 2, 1170, lt - 2.6)
+    pop(c, word_img("RM399,000", 160, YELLOW), W / 2, 1330, lt - 2.85, dur=0.45)
+    chip(c, "TANAH 5,000 KAKI PERSEGI", lt - 3.3, y=1560)
+    return c
 
 
 def scene_cuts(t):
@@ -139,8 +167,10 @@ def frame(i):
         c = v2.scene_hook(t * 3.0 / T3D)
     elif t < T3D + L3D:
         c = scene_3d(t)
-    elif t < CTA_START:
+    elif t < PRICE_START:
         c = scene_cuts(t)
+    elif t < CTA_START:
+        c = scene_price(t)
     else:
         c = v2.scene_cta(21.0 + (t - CTA_START))
     img = c.convert("RGB")
@@ -257,10 +287,15 @@ def soundtrack(path):
             add(bt, tone(f, BEAT / 2, 6, (1, 0.6, 0.3)), 0.15)
             add(bt + BEAT / 2, tone(f, BEAT / 2, 6, (1, 0.6, 0.3)), 0.15)
     # whooshes at cuts
-    for ct in [T3D, T3D + L3D, beat_at(13), beat_at(16), CTA_START]:
+    for ct in [T3D, T3D + L3D, beat_at(13), beat_at(16), PRICE_START, CTA_START]:
         lt = np.arange(int(0.45 * SR)) / SR
         w = np.convolve(rng.standard_normal(len(lt)), np.ones(12) / 12, mode="same") * np.sin(np.pi * lt / 0.45) ** 2
         add(ct - 0.25, w, 0.35)
+    # price reveal: strike hit, rebate pop, final-price chime
+    add(PRICE_START + 1.1, thud(), 0.5)
+    add(PRICE_START + 1.75, tone(1318.5, 0.5, 6, (1, 0.4)), 0.12)
+    for j, f in enumerate((1046.5, 1318.5, 1568.0, 2093.0)):
+        add(PRICE_START + 2.85 + j * 0.07, tone(f, 0.9, 4, (1, 0.3)), 0.11)
     # sidechain duck
     duck = np.ones(n)
     for k, bt in beats:
