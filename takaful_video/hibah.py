@@ -214,14 +214,16 @@ def scene_cta(d, lt, D):
 
 
 # ---------------------------------------------------------------- variasi: tanpa vs dengan hibah
-def make_compare(heading, rows, footer):
+def make_compare(heading, rows, footer, labels=("TANPA HIBAH", "DENGAN HIBAH"), single=False):
     def scene(d, lt, D):
         atext(d, heading, 540, 170, F("xb", 64), INK, lt, 0.1, maxw=940)
-        cols = [(70, 525, "TANPA HIBAH", GREY, "sad", 0.4), (555, 1010, "DENGAN HIBAH", TEAL, "happy", 0.7)]
+        cols = [(70, 525, labels[0], GREY, "sad", 0.4), (555, 1010, labels[1], TEAL, "happy", 0.7)]
         for side, (x0, x1, hdr, c, mood, st) in enumerate(cols):
             cx = (x0 + x1) / 2
             p = ease_back(prog(lt, st, 0.6))
-            if p > 0:
+            if p > 0 and single:
+                person(d, cx, 480, 0.95 * p, mood, shirt=c)
+            elif p > 0:
                 person(d, cx - 45, 480, 0.85 * p, mood, shirt=c, hijab=TEAL_D)
                 person(d, cx + 85, 545, 0.5 * p, mood, shirt=GOLD if side else GREY)
             e = ease(prog(lt, st + 0.2, 0.5))
