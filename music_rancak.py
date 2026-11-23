@@ -2,9 +2,10 @@
 
 Usage: python3 music_rancak.py [out.wav]   (default: hf_5lot/assets/music_rancak.wav)
 
-Timeline (seconds, from hf_5lot/index.html): teaser 0-2, hook 2-4.5, 3D build 4.5-16
-(walls rise ~6.6-10, first roof lands 11.26, then every 0.35 s), photo cuts 16 / 17.76 /
-19.26, price 20.76 (strike 21.86, rebate 22.51, final price 23.61), CTA 25.76-29.76.
+Timeline (seconds, from hf_5lot/index.html): teaser 0-2, real site photos 2-6.76,
+transformation on the site photo 6.76-11.5 (walls 7.76, finished 8.76), 3D build 11.5-23
+(first roof lands 18.26, then every 0.35 s), photo cuts 23 / 24.76 / 26.26, price 27.76
+(strike 28.86, rebate 29.51, final price 30.61), CTA 32.76-36.76.
 """
 import os
 import sys
@@ -13,9 +14,9 @@ import wave
 import numpy as np
 
 SR = 44100
-DUR = 29.76
+DUR = 36.76
 N = int(SR * DUR)
-DROP = 11.2636                     # first roof touches down
+DROP = 18.2636                     # first roof touches down (3D build starts at 11.5)
 BEAT = 0.5                         # 120 bpm
 PHASE = DROP % BEAT                # every beat sits on this grid
 rng = np.random.default_rng(7)
@@ -136,8 +137,8 @@ def bar_index(t):
 beats = [PHASE + k * BEAT for k in range(int(DUR / BEAT) + 1)]
 
 # sections: (start, end, level) — 0 off, 1 light, 2 groove, 3 full
-SECT = [(0.0, 2.0, 3), (2.0, 4.5, 1), (4.5, 9.26, 2), (9.26, 11.26, 0), (11.26, 20.76, 3),
-        (20.76, 25.76, 2), (25.76, 29.2, 3)]
+SECT = [(0.0, 2.0, 3), (2.0, 6.76, 1), (6.76, 16.26, 2), (16.26, 18.26, 0), (18.26, 27.76, 3),
+        (27.76, 32.76, 2), (32.76, 36.2, 3)]
 
 
 def level(t):
@@ -152,7 +153,7 @@ for i, bt in enumerate(beats):
     lv = level(bt)
     if bt > DUR - 0.6:
         break
-    if lv >= 1 and not (9.26 <= bt < 11.26):
+    if lv >= 1 and not (16.26 <= bt < 18.26):
         add(bt, kick(), 0.75)
     if lv >= 2 or (lv == 1 and i % 2 == 1):
         if i % 2 == 1:
@@ -189,7 +190,7 @@ for i, bt in enumerate(beats):
 # --- light pad under the hook and build so it never feels empty
 for i, bt in enumerate(beats):
     pos = int(round((bt - DROP) / BEAT)) % 4
-    if pos != 0 or not (2.0 <= bt < 11.0):
+    if pos != 0 or not (2.0 <= bt < 18.0):
         continue
     b = bar_index(bt + 0.01) % 4
     n = int(2.0 * SR)
@@ -211,16 +212,19 @@ for i, bt in enumerate(beats):
     bar = bar_index(bt + 0.01) % 4
     for k, f in enumerate(LEAD[bar]):
         t0 = bt + k * BEAT / 2
-        if f and t0 < 29.0:
+        if f and t0 < 36.0:
             add(t0, square(f, 0.26, decay=6, vib=0.02), 0.06, pan=0.15)
             add(t0 + 0.18, square(f, 0.2, decay=9), 0.02, pan=-0.4)   # echo
 
 # --- hits that follow the picture
 add(0.0, impact(), 0.9)
-add(1.75, whoosh(), 0.35)
+# real site -> walls -> finished houses on the photo
+add(7.7636, drum_tone(80, 0.35, 1.2), 0.6)
+add(7.7636, clap(), 0.25)
+add(8.7636, impact(), 0.85)
 # construction thuds while the walls rise
 for bt in beats:
-    if 6.6 <= bt < 9.2:
+    if 13.6 <= bt < 16.2:
         t = np.arange(int(0.25 * SR)) / SR
         add(bt, np.sin(2 * np.pi * (70 + 50 * np.exp(-t * 25)) * t) * np.exp(-t * 14), 0.35)
 # build-up: riser + snare roll accelerating into the drop
@@ -233,13 +237,13 @@ while st < DROP - 0.03:
 add(DROP, impact(), 1.0)
 for k in range(1, 5):                       # the other four roofs
     add(DROP + 0.35 * k, drum_tone(110, 0.3, 1.0), 0.45)
-for ct in (16.0, 17.7636, 19.2636, 20.7636, 25.7636):
+for ct in (2.0, 6.7636, 11.5, 23.0, 24.7636, 26.2636, 27.7636, 32.7636):
     add(ct - 0.25, whoosh(), 0.3)
-add(21.86, drum_tone(90, 0.3, 1.2), 0.5)     # price struck out
-add(22.51, chime(1318.5), 0.12)              # rebate
+add(28.86, drum_tone(90, 0.3, 1.2), 0.5)     # price struck out
+add(29.51, chime(1318.5), 0.12)              # rebate
 for j, f in enumerate((1046.5, 1318.5, 1568.0, 2093.0)):
-    add(23.61 + j * 0.07, chime(f), 0.1)     # final price
-add(29.2636, impact(), 0.6)            # last hit before the fade
+    add(30.61 + j * 0.07, chime(f), 0.1)     # final price
+add(36.2636, impact(), 0.6)            # last hit before the fade
 
 # --- mix: sidechain pump on the kick, glue, normalise
 duck = np.ones(N)

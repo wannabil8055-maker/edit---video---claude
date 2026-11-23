@@ -1,0 +1,50 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0b0f1a; font-family: "Inter", sans-serif; }
+    .s-shot { position: absolute; inset: 0; overflow: hidden; }
+    .s-img { position: absolute; left: 0; top: 0; width: 3410px; height: 1920px; }
+    .s-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,8,18,.6) 0%, rgba(5,8,18,.1) 40%, rgba(5,8,18,0) 70%); }
+    .s-row { position: absolute; left: 120px; width: 660px; display: flex; flex-direction: column; align-items: center; gap: 16px; top: 330px; }
+    .s-word { color: #fff; font-weight: 900; font-size: 84px; letter-spacing: -0.02em; text-shadow: 0 6px 24px rgba(0,0,0,.6); line-height: 1; white-space: nowrap; }
+    .s-box { background: #ffd23f; color: #111; font-weight: 900; font-size: 58px; padding: 10px 26px 14px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.4); line-height: 1; white-space: nowrap; }
+    .s-tag { position: absolute; left: 120px; top: 1150px; background: rgba(17,24,39,.85); color: #fff; font-weight: 700; font-size: 34px; padding: 10px 20px 12px; border-radius: 999px; line-height: 1; }
+    .s-flash { position: absolute; inset: 0; background: #fff; }
+  </style>
+  <div id="root" data-composition-id="site" data-width="1080" data-height="1920">
+    <div id="s-1" class="clip s-shot" data-start="0" data-duration="1.6">
+      <img id="s-1-img" class="s-img" src="assets/site2.jpg" alt="Tapak sebenar dengan jalan masuk" />
+      <div class="s-shade"></div>
+      <div class="s-row"><div id="s-1a" class="s-word">INI TAPAK</div><div id="s-1b" class="s-box">LOKASI SEBENAR</div></div>
+      <div id="s-1t" class="s-tag">TAPAK 5 LOT</div>
+    </div>
+    <div id="s-2" class="clip s-shot" data-start="1.6" data-duration="1.6">
+      <img id="s-2-img" class="s-img" src="assets/site3.jpg" alt="Jalan di sebelah tapak" />
+      <div class="s-shade"></div>
+      <div class="s-row"><div id="s-2a" class="s-word">5 LOT</div><div id="s-2b" class="s-box">TEPI JALAN</div></div>
+    </div>
+    <div id="s-3" class="clip s-shot" data-start="3.2" data-duration="1.5636">
+      <img id="s-3-img" class="s-img" src="assets/site4.jpg" alt="Kawasan lapang tapak" />
+      <div class="s-shade"></div>
+      <div class="s-row"><div id="s-3a" class="s-word">5,000</div><div id="s-3b" class="s-box">KAKI PERSEGI / LOT</div></div>
+    </div>
+    <div id="s-f1" class="clip s-flash" data-start="0" data-duration="0.25"></div>
+    <div id="s-f2" class="clip s-flash" data-start="1.6" data-duration="0.15"></div>
+    <div id="s-f3" class="clip s-flash" data-start="3.2" data-duration="0.15"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const pop = (sel, at, s = 0.35) => tl.fromTo(sel, { scale: 0.35, opacity: 0 }, { scale: 1, opacity: 1, duration: s, ease: "back.out(2.2)" }, at);
+    // each photo drifts across its width; punch-in on the cut
+    tl.fromTo("#s-1-img", { x: -1500, scale: 1.12 }, { x: -1250, scale: 1.0, duration: 1.6, ease: "power2.out" }, 0);
+    tl.fromTo("#s-2-img", { x: -1100, scale: 1.12 }, { x: -1400, scale: 1.0, duration: 1.6, ease: "power2.out" }, 1.6);
+    tl.fromTo("#s-3-img", { x: -900, scale: 1.12 }, { x: -650, scale: 1.0, duration: 1.5636, ease: "power2.out" }, 3.2);
+    pop("#s-1a", 0.1); pop("#s-1b", 0.3);
+    tl.fromTo("#s-1t", { x: -500 }, { x: 0, duration: 0.35, ease: "back.out(1.6)" }, 0.45);
+    pop("#s-2a", 1.65); pop("#s-2b", 1.85);
+    pop("#s-3a", 3.25); pop("#s-3b", 3.45);
+    tl.fromTo("#s-f1", { opacity: 0.85 }, { opacity: 0, duration: 0.24 }, 0);
+    tl.fromTo("#s-f2", { opacity: 0.6 }, { opacity: 0, duration: 0.14 }, 1.6);
+    tl.fromTo("#s-f3", { opacity: 0.6 }, { opacity: 0, duration: 0.14 }, 3.2);
+    window.__timelines["site"] = tl;
+  </script>
+</template>

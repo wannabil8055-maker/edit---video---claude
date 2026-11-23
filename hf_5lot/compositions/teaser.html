@@ -1,7 +1,7 @@
 <template>
   <style>
     #root { position: absolute; inset: 0; overflow: hidden; background: #0b0f1a; font-family: "Inter", sans-serif; }
-    #t-photo { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+    #t-photo { position: absolute; left: 0; top: 0; width: 3410px; height: 1920px; }
     #t-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,8,18,.78) 0%, rgba(5,8,18,.35) 50%, rgba(5,8,18,.1) 75%); }
     .t-row { position: absolute; left: 120px; width: 660px; display: flex; justify-content: center; }
     .t-word { color: #fff; font-weight: 900; font-size: 84px; letter-spacing: -0.02em; text-shadow: 0 6px 24px rgba(0,0,0,.6); line-height: 1; white-space: nowrap; }
@@ -11,7 +11,7 @@
     #t-flash { position: absolute; inset: 0; background: #fff; }
   </style>
   <div id="root" data-composition-id="teaser" data-width="1080" data-height="1920">
-    <img id="t-photo" class="clip" src="assets/hook_result.jpg" data-start="0" data-duration="2" alt="Lima banglo siap sebaris" />
+    <img id="t-photo" class="clip" src="assets/site_after.jpg" data-start="0" data-duration="2" alt="Lima banglo siap di tapak sebenar" />
     <div id="t-shade" class="clip" data-start="0" data-duration="2"></div>
     <div id="t-r1" class="clip t-row" data-start="0" data-duration="2" style="top: 320px">
       <div id="t-r1t" class="t-word">BANGLO 4 BILIK</div>
@@ -29,7 +29,7 @@
   </div>
   <script>
     const tl = gsap.timeline({ paused: true });
-    tl.fromTo("#t-photo", { scale: 1.18 }, { scale: 1.0, duration: 2, ease: "power2.out" }, 0);
+    tl.fromTo("#t-photo", { x: -1000, scale: 1.12 }, { x: -1100, scale: 1.0, duration: 2, ease: "power2.out" }, 0);
     // frame 0 is the thumbnail: both lines already readable, settling in
     tl.fromTo("#t-r1t", { scale: 1.04, y: 0 }, { scale: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0);
     tl.fromTo("#t-r2t", { scale: 1.06, rotation: -4 }, { scale: 1, rotation: -3, duration: 0.35, ease: "back.out(2.2)" }, 0);

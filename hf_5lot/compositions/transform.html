@@ -1,0 +1,69 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0b0f1a; font-family: "Inter", sans-serif; }
+    #tr-pan { position: absolute; left: 0; top: 0; width: 3410px; height: 1920px; }
+    .tr-layer { position: absolute; left: 0; top: 0; width: 3410px; height: 1920px; }
+    #tr-after-wrap { position: absolute; left: 0; top: 0; width: 3410px; height: 1920px; }
+    .tr-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,8,18,.55) 0%, rgba(5,8,18,0) 35%); }
+    .tr-row { position: absolute; left: 120px; width: 660px; display: flex; flex-direction: column; align-items: center; gap: 16px; top: 330px; }
+    .tr-word { color: #fff; font-weight: 900; font-size: 80px; letter-spacing: -0.02em; text-shadow: 0 6px 24px rgba(0,0,0,.6); line-height: 1; white-space: nowrap; }
+    .tr-box { background: #ffd23f; color: #111; font-weight: 900; font-size: 76px; padding: 10px 28px 14px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.4); line-height: 1; white-space: nowrap; }
+    #tr-divider { position: absolute; top: 0; left: 0; width: 8px; height: 1920px; background: #fff; box-shadow: 0 0 24px rgba(0,0,0,.5); }
+    .tr-lbl { position: absolute; top: 1160px; background: rgba(17,24,39,.85); color: #fff; font-weight: 900; font-size: 40px; padding: 10px 20px 12px; border-radius: 10px; line-height: 1; }
+    .tr-flash { position: absolute; inset: 0; background: #fff; }
+  </style>
+  <div id="root" data-composition-id="transform" data-width="1080" data-height="1920">
+    <div id="tr-pan">
+      <img id="tr-photo" class="clip tr-layer" src="assets/site1.jpg" data-start="0" data-duration="4.7364" alt="Tapak sebenar sebelum dibina" />
+      <img id="tr-walls" class="clip tr-layer" src="assets/site_walls.png" data-start="1.0" data-duration="1.9" alt="" />
+      <div id="tr-after-wrap" class="clip" data-start="2.0" data-duration="2.7364">
+        <img id="tr-after" class="tr-layer" src="assets/site_done.png" alt="Lima banglo siap di tapak sebenar" />
+      </div>
+    </div>
+    <div class="clip tr-shade" id="tr-shade" data-start="0" data-duration="4.7364"></div>
+
+    <div id="tr-g1" class="clip tr-row" data-start="0.1" data-duration="0.9">
+      <div id="tr-g1a" class="tr-word">BAYANGKAN…</div>
+    </div>
+    <div id="tr-g2" class="clip tr-row" data-start="1.0" data-duration="1.0">
+      <div id="tr-g2a" class="tr-word">DIBINA DI SINI</div>
+    </div>
+    <div id="tr-g3" class="clip tr-row" data-start="2.0" data-duration="1.3">
+      <div id="tr-g3a" class="tr-word">JADI</div>
+      <div id="tr-g3b" class="tr-box">MACAM NI!</div>
+    </div>
+
+    <div id="tr-split" class="clip" data-start="3.3" data-duration="1.4364" data-layout-allow-overlap>
+      <div id="tr-divider"></div>
+      <div id="tr-lb" class="tr-lbl" style="left: 560px">SEBELUM</div>
+      <div id="tr-la" class="tr-lbl" style="left: 140px">SELEPAS</div>
+    </div>
+
+    <div id="tr-f1" class="clip tr-flash" data-start="1.0" data-duration="0.2"></div>
+    <div id="tr-f2" class="clip tr-flash" data-start="2.0" data-duration="0.3"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const pop = (sel, at, s = 0.35) => tl.fromTo(sel, { scale: 0.35, opacity: 0 }, { scale: 1, opacity: 1, duration: s, ease: "back.out(2.2)" }, at);
+    const out = (sel, at) => tl.fromTo(sel, { opacity: 1 }, { opacity: 0, duration: 0.15 }, at);
+    // slow push across the plot: from the near house towards the road
+    tl.fromTo("#tr-pan", { x: -700, scale: 1.0 }, { x: -1150, scale: 1.0, duration: 3.3, ease: "power1.inOut" }, 0);
+    // walls rise out of the ground, then the finished houses land
+    tl.fromTo("#tr-walls", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.25, ease: "power3.out" }, 1.0);
+    tl.fromTo("#tr-after", { y: -30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.2, ease: "power4.out" }, 2.0);
+    tl.fromTo("#tr-pan", { y: 0 }, { keyframes: [{ y: 12 }, { y: -9 }, { y: 6 }, { y: 0 }], duration: 0.28, ease: "none" }, 2.0);
+    pop("#tr-g1a", 0.1); out("#tr-g1a", 0.85);
+    pop("#tr-g2a", 1.05); out("#tr-g2a", 1.85);
+    tl.fromTo("#tr-g3a", { y: -50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.25, ease: "power3.out" }, 2.05);
+    tl.fromTo("#tr-g3b", { scale: 0.2, opacity: 0, rotation: -8 }, { scale: 1, opacity: 1, rotation: -3, duration: 0.4, ease: "back.out(2.6)" }, 2.2);
+    out("#tr-g3a, #tr-g3b", 3.15);
+    // before / after: the finished layer is wiped back to reveal the bare land on the right
+    tl.fromTo("#tr-after-wrap", { clipPath: "inset(0px 1180px 0px 0px)" }, { clipPath: "inset(0px 1716px 0px 0px)", duration: 0.6, ease: "power3.inOut" }, 3.3);
+    tl.fromTo("#tr-divider", { x: 1080 }, { x: 536, duration: 0.6, ease: "power3.inOut" }, 3.3);
+    tl.fromTo("#tr-lb", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.25 }, 3.75);
+    tl.fromTo("#tr-la", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.25 }, 3.85);
+    tl.fromTo("#tr-f1", { opacity: 0.6 }, { opacity: 0, duration: 0.18 }, 1.0);
+    tl.fromTo("#tr-f2", { opacity: 0.85 }, { opacity: 0, duration: 0.28 }, 2.0);
+    window.__timelines["transform"] = tl;
+  </script>
+</template>
