@@ -22,13 +22,13 @@ FONTS = {"xb": "Inter-ExtraBold.otf", "b": "Inter-Bold.otf", "sb": "Inter-SemiBo
          "m": "Inter-Medium.otf", "r": "Inter-Regular.otf"}
 
 # Palet warna
-BG_TOP, BG_BOT = (238, 249, 246), (204, 237, 230)
-INK = (11, 61, 58)
-SOFT = (78, 110, 108)
-TEAL = (19, 168, 158)
-TEAL_D = (10, 112, 106)
-TEAL_L = (196, 236, 230)
-CORAL = (240, 96, 80)
+BG_TOP, BG_BOT = (255, 247, 246), (250, 221, 221)
+INK = (58, 18, 24)
+SOFT = (115, 78, 82)
+TEAL = (204, 16, 48)  # warna utama (merah)
+TEAL_D = (146, 8, 32)
+TEAL_L = (252, 212, 216)
+CORAL = (242, 124, 38)  # aksen oren
 GOLD = (244, 183, 64)
 GOLD_D = (200, 140, 30)
 WHITE = (255, 255, 255)
@@ -405,8 +405,8 @@ BENEFITS = ["Bilik & makan di hospital", "Kos pembedahan & rawatan", "Ujian makm
 def hospital(d, cx, by, s, a):
     rrect(d, cx - 170 * s, by - 260 * s, cx + 170 * s, by, 24 * s, WHITE, a)
     rrect(d, cx - 70 * s, by - 340 * s, cx + 70 * s, by - 230 * s, 20 * s, WHITE, a)
-    rrect(d, cx - 12 * s, by - 322 * s, cx + 12 * s, by - 248 * s, 5 * s, CORAL, a)
-    rrect(d, cx - 37 * s, by - 297 * s, cx + 37 * s, by - 273 * s, 5 * s, CORAL, a)
+    rrect(d, cx - 12 * s, by - 322 * s, cx + 12 * s, by - 248 * s, 5 * s, TEAL, a)
+    rrect(d, cx - 37 * s, by - 297 * s, cx + 37 * s, by - 273 * s, 5 * s, TEAL, a)
     for r in range(2):
         for c in range(4):
             if c in (1, 2) and r == 1:
@@ -536,7 +536,7 @@ def scene_cta(d, lt, D):
             person(d, fx, fy, sc * p, "happy", shirt=sh, hijab=hj)
     hp = ease_back(prog(lt, 1.1, 0.6))
     if hp > 0:
-        heart(d, 540, 560 + 8 * math.sin(lt * 3), 90 * hp)
+        heart(d, 540, 560 + 8 * math.sin(lt * 3), 90 * hp, TEAL)
     atext(d, "Sihat itu nikmat.", 540, 1150, F("xb", 88), INK, lt, 1.2)
     atext(d, "Lindungi diri & keluarga hari ini.", 540, 1275, F("sb", 52), TEAL_D, lt, 1.5, maxw=940)
 
@@ -572,7 +572,7 @@ def scene_agent(d, lt, D):
     if b > 0:
         pf = F("xb", 46)
         pw = (pf.getlength("Hubungi saya hari ini!") / S + 100) * b
-        rrect(d, 540 - pw / 2, 1310, 540 + pw / 2, 1420, 55, CORAL, 1.0)
+        rrect(d, 540 - pw / 2, 1310, 540 + pw / 2, 1420, 55, TEAL, 1.0)
         if b > 0.8:
             d.text((X(540), X(1365)), "Hubungi saya hari ini!", font=pf, fill=col(WHITE), anchor="mm")
     a = ease(prog(lt, 2.4, 0.6))
@@ -675,7 +675,7 @@ def main():
         for ts in sys.argv[2:]:
             render(float(ts)).save(os.path.join(outdir, f"frame_{float(ts):05.1f}.png"))
         return
-    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "takaful_aia_nabil_rahman.mp4")
+    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "takaful_aia_nabil_rahman_merah.mp4")
     music = os.path.join(HERE, "music.wav")
     make_music(music)
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
