@@ -619,16 +619,16 @@ def render_bytes(i):
 
 
 # ---------------------------------------------------------------- muzik
-def make_music(path):
+def make_music(path, total=None, prog_=None, bar=3.0):
+    total = total or TOTAL
     sr = 44100
-    n = int(sr * (TOTAL + 0.5))
+    n = int(sr * (total + 0.5))
     t = np.arange(n) / sr
     mf = lambda m: 440.0 * 2 ** ((m - 69) / 12)
     chords = {"C": ([60, 64, 67], 36), "Am": ([57, 60, 64], 33), "F": ([57, 60, 65], 41),
               "G": ([59, 62, 67], 43), "Dm": ([57, 62, 65], 38), "E": ([56, 59, 64], 40)}
-    prog_ = ["C", "Am", "F", "Am", "F", "Dm", "E", "Am", "F", "G", "C", "Am", "F", "G", "C", "Am", "F", "G",
+    prog_ = prog_ or ["C", "Am", "F", "Am", "F", "Dm", "E", "Am", "F", "G", "C", "Am", "F", "G", "C", "Am", "F", "G",
              "C", "Am", "F", "G", "C"]
-    bar = 3.0
     pad = np.zeros(n)
     arp = np.zeros(n)
     bass = np.zeros(n)
@@ -658,7 +658,7 @@ def make_music(path):
     mix /= np.max(np.abs(mix)) + 1e-9
     mix *= 0.5
     fade_in = np.minimum(1, t / 1.5)
-    fade_out = np.clip((TOTAL - t) / 3.0, 0, 1)
+    fade_out = np.clip((total - t) / 3.0, 0, 1)
     mix *= fade_in * fade_out
     pcm = (mix * 32767).astype(np.int16)
     with wave.open(path, "wb") as w:
