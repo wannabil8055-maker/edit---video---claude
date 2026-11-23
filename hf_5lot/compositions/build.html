@@ -1,0 +1,79 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0b0f1a; font-family: "Inter", sans-serif; }
+    #b-cam { position: absolute; inset: 0; }
+    #b-video { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; object-fit: cover; }
+    #b-top { position: absolute; left: 0; top: 0; width: 1080px; height: 900px; background: linear-gradient(180deg, rgba(5,8,18,.55), rgba(5,8,18,0)); }
+    .b-grp { position: absolute; left: 120px; top: 310px; width: 768px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+    .b-word { color: #fff; font-weight: 900; letter-spacing: -0.02em; text-shadow: 0 6px 24px rgba(0,0,0,.6); line-height: 1; }
+    .b-box { background: #ffd23f; color: #111; font-weight: 900; padding: 10px 28px 14px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.4); line-height: 1; }
+    .b-chips { position: absolute; left: 120px; top: 300px; display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
+    .b-chip { background: #ffd23f; color: #111; font-weight: 900; font-size: 40px; padding: 12px 22px 14px; border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,.35); line-height: 1; }
+    .b-chip.dark { background: #111827; color: #ffd23f; }
+    .b-flash { position: absolute; inset: 0; background: #fff; }
+  </style>
+  <div id="root" data-composition-id="build" data-width="1080" data-height="1920">
+    <div id="b-cam">
+      <video id="b-video" class="clip" src="assets/build3d.mp4" data-start="0" data-duration="11.5" muted playsinline></video>
+    </div>
+    <div id="b-top" class="clip" data-start="0" data-duration="11.5"></div>
+
+    <!-- 1. five empty plots -->
+    <div id="b-g1" class="clip b-grp" data-start="0.25" data-duration="1.95">
+      <div id="b-g1a" class="b-word" style="font-size: 104px">5 LOT TANAH</div>
+      <div id="b-g1b" class="b-box" style="font-size: 50px">5,000 KAKI PERSEGI / LOT</div>
+    </div>
+    <!-- 2. walls rise -->
+    <div id="b-g2" class="clip b-grp" data-start="2.1" data-duration="3.4">
+      <div id="b-g2a" class="b-word" style="font-size: 140px">5 UNIT</div>
+      <div id="b-g2b" class="b-box" style="font-size: 66px">BANGLO SETINGKAT</div>
+    </div>
+    <!-- 3. roofs land one by one (6.76 s + 0.35 s per plot) -->
+    <div id="b-r1" class="clip b-grp" data-start="6.76" data-duration="0.35"><div id="b-r1t" class="b-word" style="font-size: 130px">RUMAH 1</div></div>
+    <div id="b-r2" class="clip b-grp" data-start="7.11" data-duration="0.35"><div id="b-r2t" class="b-word" style="font-size: 130px">RUMAH 2</div></div>
+    <div id="b-r3" class="clip b-grp" data-start="7.46" data-duration="0.35"><div id="b-r3t" class="b-word" style="font-size: 130px">RUMAH 3</div></div>
+    <div id="b-r4" class="clip b-grp" data-start="7.81" data-duration="0.35"><div id="b-r4t" class="b-word" style="font-size: 130px">RUMAH 4</div></div>
+    <div id="b-r5" class="clip b-grp" data-start="8.16" data-duration="0.45"><div id="b-r5t" class="b-word" style="font-size: 130px">RUMAH 5</div></div>
+    <div id="b-g3" class="clip b-grp" data-start="8.61" data-duration="1.0">
+      <div id="b-g3a" class="b-word" style="font-size: 120px">5 RUMAH</div>
+      <div id="b-g3b" class="b-box" style="font-size: 190px; padding: 14px 40px 20px">SIAP!</div>
+    </div>
+    <!-- 4. specs on the beat -->
+    <div id="b-chips" class="clip b-chips" data-start="9.6" data-duration="1.9">
+      <div id="b-c1" class="b-chip dark">SETIAP LOT:</div>
+      <div id="b-c2" class="b-chip">TANAH 5,000 KAKI PERSEGI</div>
+      <div id="b-c3" class="b-chip">4 BILIK · 3 BILIK AIR</div>
+      <div id="b-c4" class="b-chip">BINAAN 1,440 KAKI PERSEGI</div>
+    </div>
+
+    <div id="b-fl1" class="clip b-flash" data-start="0" data-duration="0.25"></div>
+    <div id="b-fl2" class="clip b-flash" data-start="6.76" data-duration="0.3"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const pop = (sel, at, s = 0.35) => tl.fromTo(sel, { scale: 0.35, opacity: 0 }, { scale: 1, opacity: 1, duration: s, ease: "back.out(2.2)" }, at);
+    const out = (sel, at) => tl.fromTo(sel, { opacity: 1 }, { opacity: 0, duration: 0.18, ease: "power1.in" }, at);
+
+    pop("#b-g1a", 0.25); pop("#b-g1b", 0.55); out("#b-g1a, #b-g1b", 1.98);
+    pop("#b-g2a", 2.1); pop("#b-g2b", 2.35); out("#b-g2a, #b-g2b", 5.28);
+    ["#b-r1t", "#b-r2t", "#b-r3t", "#b-r4t", "#b-r5t"].forEach((s, i) => {
+      tl.fromTo(s, { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.16, ease: "power4.out" }, 6.76 + 0.35 * i);
+    });
+    tl.fromTo("#b-g3a", { y: -60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 8.61);
+    tl.fromTo("#b-g3b", { scale: 0.2, opacity: 0, rotation: -8 }, { scale: 1, opacity: 1, rotation: -3, duration: 0.4, ease: "back.out(2.6)" }, 8.76);
+    out("#b-g3a, #b-g3b", 9.4);
+    ["#b-c1", "#b-c2", "#b-c3", "#b-c4"].forEach((s, i) => {
+      tl.fromTo(s, { x: -760 }, { x: 0, duration: 0.4, ease: "back.out(1.6)" }, 9.6 + 0.15 * i);
+    });
+    out("#b-c1, #b-c2, #b-c3, #b-c4", 11.28);
+
+    // camera shake when the first roof slams down
+    tl.fromTo("#b-cam", { x: 0, y: 0 }, {
+      keyframes: [{ x: 16, y: -10 }, { x: -13, y: 9 }, { x: 9, y: -6 }, { x: -5, y: 4 }, { x: 0, y: 0 }],
+      duration: 0.32, ease: "none",
+    }, 6.76);
+    tl.fromTo("#b-fl1", { opacity: 0.8 }, { opacity: 0, duration: 0.22 }, 0);
+    tl.fromTo("#b-fl2", { opacity: 0.7 }, { opacity: 0, duration: 0.28 }, 6.76);
+    window.__timelines["build"] = tl;
+  </script>
+</template>

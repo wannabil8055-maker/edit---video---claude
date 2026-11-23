@@ -1,0 +1,59 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0b0f1a; font-family: "Inter", sans-serif; }
+    #p-bg { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+    .p-row { position: absolute; left: 120px; width: 660px; display: flex; justify-content: center; }
+    .p-label { color: #fff; font-weight: 700; font-size: 44px; letter-spacing: 0.02em; text-shadow: 0 4px 16px rgba(0,0,0,.5); line-height: 1; }
+    .p-big { color: #fff; font-weight: 900; font-size: 104px; letter-spacing: -0.02em; text-shadow: 0 6px 24px rgba(0,0,0,.5); line-height: 1; }
+    .p-box { background: #ffd23f; color: #111; font-weight: 900; font-size: 64px; padding: 12px 26px 16px; white-space: nowrap; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.4); line-height: 1; }
+    .p-row.low { width: 660px; }
+    .p-final { color: #ffd23f; font-weight: 900; font-size: 104px; letter-spacing: -0.03em; text-shadow: 0 8px 30px rgba(0,0,0,.6); line-height: 1; }
+    .p-chip { background: #111827; color: #ffd23f; font-weight: 900; font-size: 42px; padding: 12px 24px 14px; border-radius: 12px; line-height: 1; }
+    #p-old-wrap { position: relative; }
+    #p-strike { position: absolute; left: -12px; top: 52px; width: calc(100% + 24px); height: 14px; background: #e63946; border-radius: 7px; transform-origin: 0% 50%; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+    #p-flash { position: absolute; inset: 0; background: #fff; }
+  </style>
+  <div id="root" data-composition-id="price" data-width="1080" data-height="1920">
+    <img id="p-bg" class="clip" src="assets/price_bg.jpg" data-start="0" data-duration="5" alt="" />
+
+    <div id="p-r1" class="clip p-row" data-start="0.1" data-duration="4.9" style="top: 320px">
+      <div id="p-r1t" class="p-label">HARGA BIASA</div>
+    </div>
+    <div id="p-r2" class="clip p-row" data-start="0.3" data-duration="4.7" style="top: 395px" data-layout-allow-overlap>
+      <div id="p-old-wrap"><div id="p-old" class="p-big">RM419,000</div><div id="p-strike" data-layout-allow-occlusion></div></div>
+    </div>
+    <div id="p-r3" class="clip p-row" data-start="1.5" data-duration="3.5" style="top: 600px">
+      <div id="p-r3t" class="p-label">PEMBELI RUMAH PERTAMA</div>
+    </div>
+    <div id="p-r4" class="clip p-row" data-start="1.75" data-duration="3.25" style="top: 675px">
+      <div id="p-r4t" class="p-box">REBATE RM20,000</div>
+    </div>
+    <div id="p-r5" class="clip p-row low" data-start="2.6" data-duration="2.4" style="top: 880px">
+      <div id="p-r5t" class="p-label">HARGA SELEPAS REBATE</div>
+    </div>
+    <div id="p-r6" class="clip p-row low" data-start="2.85" data-duration="2.15" style="top: 945px">
+      <div id="p-r6t" class="p-final">RM399,000</div>
+    </div>
+    <div id="p-r7" class="clip p-row low" data-start="3.3" data-duration="1.7" style="top: 1100px">
+      <div id="p-r7t" class="p-chip">TANAH 5,000 KAKI PERSEGI</div>
+    </div>
+    <div id="p-flash" class="clip" data-start="0" data-duration="0.2"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const pop = (sel, at, s = 0.35) => tl.fromTo(sel, { scale: 0.35, opacity: 0 }, { scale: 1, opacity: 1, duration: s, ease: "back.out(2.2)" }, at);
+    tl.fromTo("#p-bg", { scale: 1.12 }, { scale: 1.0, duration: 5, ease: "none" }, 0);
+    tl.fromTo("#p-flash", { opacity: 0.6 }, { opacity: 0, duration: 0.18 }, 0);
+    pop("#p-r1t", 0.1);
+    pop("#p-old-wrap", 0.3);
+    tl.fromTo("#p-strike", { scaleX: 0, rotation: -6 }, { scaleX: 1, rotation: -6, duration: 0.28, ease: "power3.out" }, 1.1);
+    tl.fromTo("#p-old", { opacity: 1 }, { opacity: 0.55, duration: 0.3 }, 1.3);
+    pop("#p-r3t", 1.5);
+    tl.fromTo("#p-r4t", { scale: 0.3, opacity: 0, rotation: -6 }, { scale: 1, opacity: 1, rotation: -2, duration: 0.4, ease: "back.out(2.6)" }, 1.75);
+    pop("#p-r5t", 2.6);
+    tl.fromTo("#p-r6t", { scale: 2.2, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: "power4.out" }, 2.85);
+    tl.to("#p-r6t", { scale: 1.03, duration: 1.6, ease: "sine.inOut" }, 3.2);
+    tl.fromTo("#p-r7t", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 3.3);
+    window.__timelines["price"] = tl;
+  </script>
+</template>

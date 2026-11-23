@@ -1,0 +1,47 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0b0f1a; font-family: "Inter", sans-serif; }
+    .c-shot { position: absolute; inset: 0; overflow: hidden; }
+    .c-bg { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+    .c-frame { position: absolute; left: 0; top: 330px; width: 1080px; height: 1100px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.55); }
+    .c-img { position: absolute; left: 0; top: 0; width: 1957px; height: 1100px; }
+    .c-cap { position: absolute; left: 120px; top: 1110px; background: #ffd23f; color: #111; font-weight: 900; font-size: 52px; padding: 12px 26px 16px; border-radius: 12px; box-shadow: 0 10px 24px rgba(0,0,0,.4); line-height: 1; }
+    .c-flash { position: absolute; inset: 0; background: #fff; }
+  </style>
+  <div id="root" data-composition-id="cuts" data-width="1080" data-height="1920">
+    <div id="c-s1" class="clip c-shot" data-start="0" data-duration="1.7636">
+      <img id="c-s1-bg" class="c-bg" src="assets/depan_bg.jpg" alt="" />
+      <div class="c-frame"><img id="c-s1-img" class="c-img" src="assets/depan.jpg" alt="Pandangan depan rumah" /></div>
+      <div id="c-s1-cap" class="c-cap">REKA BENTUK SEBENAR</div>
+    </div>
+    <div id="c-s2" class="clip c-shot" data-start="1.7636" data-duration="1.5">
+      <img id="c-s2-bg" class="c-bg" src="assets/kiri_bg.jpg" alt="" />
+      <div class="c-frame"><img id="c-s2-img" class="c-img" src="assets/kiri.jpg" alt="Anjung rumah" /></div>
+      <div id="c-s2-cap" class="c-cap">ANJUNG LUAS</div>
+    </div>
+    <div id="c-s3" class="clip c-shot" data-start="3.2636" data-duration="1.5">
+      <img id="c-s3-bg" class="c-bg" src="assets/kanan_bg.jpg" alt="" />
+      <div class="c-frame"><img id="c-s3-img" class="c-img" src="assets/kanan.jpg" alt="Pandangan sisi rumah" /></div>
+      <div id="c-s3-cap" class="c-cap">5 LOT SAHAJA</div>
+    </div>
+    <div id="c-f1" class="clip c-flash" data-start="0" data-duration="0.3"></div>
+    <div id="c-f2" class="clip c-flash" data-start="1.7636" data-duration="0.15"></div>
+    <div id="c-f3" class="clip c-flash" data-start="3.2636" data-duration="0.15"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // slow pans across each render, with a punch-in on the cut
+    const shot = (n, at, dur, x0, x1) => {
+      tl.fromTo(`#c-s${n}-img`, { x: x0, scale: 1.14 }, { x: x1, scale: 1.0, duration: dur, ease: "power2.out" }, at);
+      tl.fromTo(`#c-s${n}-bg`, { scale: 1.1 }, { scale: 1.0, duration: dur, ease: "none" }, at);
+      tl.fromTo(`#c-s${n}-cap`, { x: -760 }, { x: 0, duration: 0.4, ease: "back.out(1.6)" }, at + 0.15);
+    };
+    shot(1, 0, 1.7636, -300, -620);
+    shot(2, 1.7636, 1.5, -150, -480);
+    shot(3, 3.2636, 1.5, -760, -420);
+    tl.fromTo("#c-f1", { opacity: 0.85 }, { opacity: 0, duration: 0.28 }, 0);
+    tl.fromTo("#c-f2", { opacity: 0.6 }, { opacity: 0, duration: 0.14 }, 1.7636);
+    tl.fromTo("#c-f3", { opacity: 0.6 }, { opacity: 0, duration: 0.14 }, 3.2636);
+    window.__timelines["cuts"] = tl;
+  </script>
+</template>

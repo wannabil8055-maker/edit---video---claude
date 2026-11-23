@@ -1,0 +1,46 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0b0f1a; font-family: "Inter", sans-serif; }
+    #k-bg { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+    .k-row { position: absolute; left: 120px; width: 660px; display: flex; justify-content: center; }
+    .k-row.low { width: 660px; }
+    #k-card { background: #fff; border-radius: 26px; padding: 22px 34px; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+    #k-logo { display: block; width: 400px; height: 259px; }
+    .k-word { color: #fff; font-weight: 900; font-size: 80px; letter-spacing: -0.02em; text-shadow: 0 6px 24px rgba(0,0,0,.55); line-height: 1; }
+    .k-box { background: #ffd23f; color: #111; font-weight: 900; font-size: 64px; padding: 10px 26px 14px; border-radius: 14px; line-height: 1; }
+    .k-phone { background: #22a447; color: #fff; font-weight: 900; font-size: 60px; padding: 16px 40px 18px; border-radius: 999px; box-shadow: 0 12px 30px rgba(0,0,0,.4); line-height: 1; letter-spacing: 0.01em; }
+    #k-fade { position: absolute; inset: 0; background: #000; }
+  </style>
+  <div id="root" data-composition-id="cta" data-width="1080" data-height="1920">
+    <img id="k-bg" class="clip" src="assets/cta_bg.jpg" data-start="0" data-duration="4" alt="" />
+    <div id="k-r1" class="clip k-row" data-start="0" data-duration="4" style="top: 300px">
+      <div id="k-card"><img id="k-logo" src="assets/logo.png" alt="AA LAND SDN BHD" /></div>
+    </div>
+    <div id="k-r2" class="clip k-row" data-start="0.3" data-duration="3.7" style="top: 650px">
+      <div id="k-r2t" class="k-word">JOM MILIKI</div>
+    </div>
+    <div id="k-r3" class="clip k-row" data-start="0.5" data-duration="3.5" style="top: 735px">
+      <div id="k-r3t" class="k-box">BANGLO IDAMAN!</div>
+    </div>
+    <div id="k-r4" class="clip k-row low" data-start="0.9" data-duration="3.1" style="top: 920px">
+      <div id="k-r4t" class="k-phone">010-764 6392</div>
+    </div>
+    <div id="k-r5" class="clip k-row low" data-start="1.1" data-duration="2.9" style="top: 1050px">
+      <div id="k-r5t" class="k-phone">016-696 6781</div>
+    </div>
+    <div id="k-fade" class="clip" data-start="3.4" data-duration="0.6"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const pop = (sel, at, s = 0.35) => tl.fromTo(sel, { scale: 0.35, opacity: 0 }, { scale: 1, opacity: 1, duration: s, ease: "back.out(2.2)" }, at);
+    tl.fromTo("#k-bg", { scale: 1.0 }, { scale: 1.1, duration: 4, ease: "none" }, 0);
+    tl.fromTo("#k-card", { y: -80, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "back.out(1.8)" }, 0);
+    pop("#k-r2t", 0.3);
+    tl.fromTo("#k-r3t", { scale: 0.3, opacity: 0, rotation: -6 }, { scale: 1, opacity: 1, rotation: -2, duration: 0.4, ease: "back.out(2.6)" }, 0.5);
+    tl.fromTo("#k-r4t", { x: -900 }, { x: 0, duration: 0.45, ease: "back.out(1.5)" }, 0.9);
+    tl.fromTo("#k-r5t", { x: 900 }, { x: 0, duration: 0.45, ease: "back.out(1.5)" }, 1.1);
+    tl.fromTo("#k-r4t, #k-r5t", { scale: 1 }, { scale: 1.05, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 1.6);
+    tl.fromTo("#k-fade", { opacity: 0 }, { opacity: 1, duration: 0.55, ease: "power1.in" }, 3.4);
+    window.__timelines["cta"] = tl;
+  </script>
+</template>

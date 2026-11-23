@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 *_audio.wav
 assets3d/
+.hyperframes/
+hf_5lot/renders/

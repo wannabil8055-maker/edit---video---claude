@@ -1,0 +1,31 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #0b0f1a; font-family: "Inter", sans-serif; }
+    #hook-photo { position: absolute; left: 0; top: 0; height: 1920px; width: 2560px; object-fit: cover; }
+    #hook-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5,8,18,.72) 0%, rgba(5,8,18,.15) 45%, rgba(5,8,18,.55) 100%); }
+    .hk-line { position: absolute; left: 120px; width: 768px; display: flex; justify-content: center; }
+    .hk-word { color: #fff; font-weight: 900; letter-spacing: -0.02em; text-shadow: 0 6px 24px rgba(0,0,0,.55); }
+    .hk-box { background: #ffd23f; color: #111; font-weight: 900; padding: 10px 30px 14px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.4); }
+    #hook-flash { position: absolute; inset: 0; background: #fff; }
+  </style>
+  <div id="root" data-composition-id="hook" data-width="1080" data-height="1920">
+    <img id="hook-photo" class="clip" src="assets/tapak.jpg" data-start="0" data-duration="2.5" alt="Tapak tanah kosong" />
+    <div id="hook-shade" class="clip" data-start="0" data-duration="2.5"></div>
+    <div id="hook-l1" class="clip hk-line" data-start="0" data-duration="2.5" style="top: 360px">
+      <div id="hook-l1-t" class="hk-word" style="font-size: 62px">TANAH KOSONG INI…</div>
+    </div>
+    <div id="hook-l2" class="clip hk-line" data-start="0.9" data-duration="1.6" style="top: 490px">
+      <div id="hook-l2-t" class="hk-box" style="font-size: 84px">JADI 5 BANGLO</div>
+    </div>
+    <div id="hook-flash" class="clip" data-start="2.3" data-duration="0.2"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#hook-photo", { x: -260, scale: 1.08 }, { x: -1220, scale: 1.0, duration: 2.5, ease: "none" }, 0);
+    tl.fromTo("#hook-l1-t", { scale: 1.12, y: 0 }, { scale: 1, y: 0, duration: 0.5, ease: "power3.out" }, 0);
+    tl.fromTo("#hook-l2-t", { scale: 0.3, opacity: 0, rotation: -4 }, { scale: 1, opacity: 1, rotation: -2, duration: 0.35, ease: "back.out(2.4)" }, 0.9);
+    tl.to("#hook-l2-t", { scale: 1.06, duration: 1.2, ease: "sine.inOut" }, 1.25);
+    tl.fromTo("#hook-flash", { opacity: 0 }, { opacity: 0.9, duration: 0.18, ease: "power2.in" }, 2.3);
+    window.__timelines["hook"] = tl;
+  </script>
+</template>
