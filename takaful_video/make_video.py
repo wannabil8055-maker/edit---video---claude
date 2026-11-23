@@ -35,6 +35,11 @@ WHITE = (255, 255, 255)
 SKIN = (226, 176, 136)
 HAIR = (45, 35, 30)
 
+BRAND = "AIA Takaful"
+AGENT = "Nabil Rahman"
+AGENT_INITIALS = "NR"
+PHONE = "011-1188 0895"
+
 
 @lru_cache(None)
 def F(w, size):
@@ -443,8 +448,8 @@ def _make_card():
     circle(d, 700, 520, 200, WHITE, 0.06)
     shield(d, 720, 110, 58, 1.0, fill=WHITE, inner=TEAL_L, cross=False)
     heart(d, 720, 108, 44, TEAL_D)
-    d.text((X(50), X(60)), "KAD PERUBATAN", font=F("b", 32), fill=col(WHITE, 0.85))
-    d.text((X(50), X(100)), "TAKAFUL", font=F("xb", 62), fill=col(WHITE))
+    d.text((X(50), X(60)), BRAND.upper(), font=F("b", 32), fill=col(WHITE, 0.85))
+    d.text((X(50), X(100)), "KAD PERUBATAN", font=F("xb", 56), fill=col(WHITE))
     rrect(d, 50, 210, 150, 285, 14, GOLD)
     d.line([(X(50), X(247)), (X(150), X(247))], fill=col(GOLD_D), width=X(3))
     d.line([(X(100), X(210)), (X(100), X(285))], fill=col(GOLD_D), width=X(3))
@@ -466,7 +471,7 @@ def scene_card(d, lt, D, img):
     global CARD_IMG
     if CARD_IMG is None:
         CARD_IMG = _make_card()
-    atext(d, "Dengan kad perubatan takaful...", 540, 230, F("xb", 66), INK, lt, 0.2, maxw=900)
+    atext(d, f"Dengan kad perubatan\n{BRAND}...", 540, 230, F("xb", 66), INK, lt, 0.2, maxw=900)
     e = ease(prog(lt, 0.5, 0.9))
     if e > 0:
         ang = (1 - e) * 14
@@ -491,7 +496,7 @@ def scene_card(d, lt, D, img):
 
 
 TIPS = ["Had tahunan & had seumur hidup", "Tempoh menunggu & penyakit sedia ada",
-        "Senarai hospital panel berdekatan", "Pengendali takaful berdaftar dengan Bank Negara Malaysia"]
+        "Senarai hospital panel berdekatan", "Penerangan lengkap daripada ejen takaful berdaftar"]
 
 
 def scene_tips(d, lt, D):
@@ -534,15 +539,52 @@ def scene_cta(d, lt, D):
         heart(d, 540, 560 + 8 * math.sin(lt * 3), 90 * hp)
     atext(d, "Sihat itu nikmat.", 540, 1150, F("xb", 88), INK, lt, 1.2)
     atext(d, "Lindungi diri & keluarga hari ini.", 540, 1275, F("sb", 52), TEAL_D, lt, 1.5, maxw=940)
-    a = ease(prog(lt, 2.2, 0.6))
+
+
+def phone_icon(d, cx, cy, s, a=1.0, c=TEAL):
+    rrect(d, cx - 0.32 * s, cy - 0.5 * s, cx + 0.32 * s, cy + 0.5 * s, 0.1 * s, c, a)
+    rrect(d, cx - 0.24 * s, cy - 0.38 * s, cx + 0.24 * s, cy + 0.3 * s, 0.04 * s, WHITE, a)
+    circle(d, cx, cy + 0.4 * s, 0.05 * s, WHITE, a)
+
+
+def scene_agent(d, lt, D):
+    atext(d, "Nak tahu lebih lanjut?", 540, 220, F("xb", 76), INK, lt, 0.2, maxw=900)
+    atext(d, f"Hubungi ejen {BRAND} anda:", 540, 330, F("m", 46), SOFT, lt, 0.4, maxw=900)
+    e = ease(prog(lt, 0.6, 0.7))
+    if e > 0:
+        o = (1 - e) * 80
+        card(d, 90, 470 + o, 990, 1250 + o, 44, e)
+        rrect(d, 90, 470 + o, 990, 640 + o, 44, TEAL, e)
+        d.rectangle((X(90), X(600 + o), X(990), X(640 + o)), fill=col(TEAL, e))
+        circle(d, 540, 640 + o, 122, WHITE, e)
+        circle(d, 540, 640 + o, 108, TEAL_D, e)
+        d.text((X(540), X(640 + o)), AGENT_INITIALS, font=F("xb", 84), fill=col(WHITE, e), anchor="mm")
+        d.text((X(540), X(830 + o)), AGENT.upper(), font=F("xb", 66), fill=col(INK, e), anchor="mm")
+        d.text((X(540), X(905 + o)), f"Ejen {BRAND}", font=F("sb", 42), fill=col(TEAL, e), anchor="mm")
+        d.line([(X(190), X(970 + o)), (X(890), X(970 + o))], fill=col(TEAL_L, e), width=X(4))
+        nf = F("xb", 78)
+        nw = nf.getlength(PHONE) / S
+        nx = 540 + 40
+        d.text((X(nx), X(1065 + o)), PHONE, font=nf, fill=col(INK, e), anchor="mm")
+        phone_icon(d, nx - nw / 2 - 60, 1065 + o, 80 * (1 + 0.07 * math.sin(lt * 6)), e)
+        d.text((X(540), X(1160 + o)), "Telefon / WhatsApp", font=F("m", 40), fill=col(SOFT, e), anchor="mm")
+    b = ease_back(prog(lt, 1.6, 0.6))
+    if b > 0:
+        pf = F("xb", 46)
+        pw = (pf.getlength("Hubungi saya hari ini!") / S + 100) * b
+        rrect(d, 540 - pw / 2, 1310, 540 + pw / 2, 1420, 55, CORAL, 1.0)
+        if b > 0.8:
+            d.text((X(540), X(1365)), "Hubungi saya hari ini!", font=pf, fill=col(WHITE), anchor="mm")
+    a = ease(prog(lt, 2.4, 0.6))
     if a > 0:
-        rrect(d, 90, 1560, 990, 1800, 28, WHITE, 0.75 * a)
-        text(d, "Video ini untuk kesedaran umum sahaja dan bukan nasihat kewangan. Sila rujuk pengendali atau "
-                "ejen takaful berdaftar untuk butiran pelan.", 540, 1600, F("r", 32), SOFT, a, maxw=820)
+        rrect(d, 90, 1530, 990, 1735, 28, WHITE, 0.75 * a)
+        text(d, "Video ini untuk kesedaran umum sahaja dan bukan nasihat kewangan. Perlindungan, terma & syarat "
+                "tertakluk kepada pelan dan sijil takaful yang diambil.", 540, 1570, F("r", 32), SOFT, a, maxw=820)
 
 
 SCENES = [(5.0, scene_title), (5.5, scene_ali), (5.5, scene_sick), (7.5, scene_bill), (7.5, scene_pool),
-          (9.5, scene_benefits), (6.5, scene_card), (7.5, scene_tips), (6.5, scene_cta)]
+          (9.5, scene_benefits), (6.5, scene_card), (7.5, scene_tips), (5.5, scene_cta),
+          (7.5, scene_agent)]
 TOTAL = sum(s[0] for s in SCENES)
 N_FRAMES = int(TOTAL * FPS)
 FADE = 0.35
@@ -567,6 +609,8 @@ def render(t):
         img = Image.blend(bg, img, clamp(a))
     d = ImageDraw.Draw(img, "RGBA")
     d.rectangle((0, 0, X(W * t / TOTAL), X(10)), fill=col(TEAL))
+    if fn is not scene_agent:
+        pill(d, 540, 36, f"{AGENT}  ·  {PHONE}", F("b", 36), TEAL_D, WHITE, 0.9, padx=34, h=76)
     return img.reduce(S)
 
 
@@ -583,7 +627,7 @@ def make_music(path):
     chords = {"C": ([60, 64, 67], 36), "Am": ([57, 60, 64], 33), "F": ([57, 60, 65], 41),
               "G": ([59, 62, 67], 43), "Dm": ([57, 62, 65], 38), "E": ([56, 59, 64], 40)}
     prog_ = ["C", "Am", "F", "Am", "F", "Dm", "E", "Am", "F", "G", "C", "Am", "F", "G", "C", "Am", "F", "G",
-             "C", "G", "C"]
+             "C", "Am", "F", "G", "C"]
     bar = 3.0
     pad = np.zeros(n)
     arp = np.zeros(n)
@@ -631,7 +675,7 @@ def main():
         for ts in sys.argv[2:]:
             render(float(ts)).save(os.path.join(outdir, f"frame_{float(ts):05.1f}.png"))
         return
-    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "takaful_medical_card.mp4")
+    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "takaful_aia_nabil_rahman.mp4")
     music = os.path.join(HERE, "music.wav")
     make_music(music)
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
