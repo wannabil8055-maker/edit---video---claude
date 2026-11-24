@@ -1,0 +1,34 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #07120b; font-family: "Inter", sans-serif; }
+    #h-bg { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+    #h-frame { position: absolute; left: 0; top: 560px; width: 1080px; height: 900px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.55); }
+    #h-img { position: absolute; left: 0; top: 0; width: 1601px; height: 900px; }
+    .h-row { position: absolute; left: 120px; width: 660px; display: flex; flex-direction: column; align-items: center; gap: 18px; top: 300px; }
+    .h-word { color: #fff; font-weight: 900; font-size: 92px; letter-spacing: -0.02em; text-shadow: 0 6px 24px rgba(0,0,0,.6); line-height: 1; white-space: nowrap; }
+    .h-box { background: #ffd23f; color: #111; font-weight: 900; font-size: 70px; padding: 10px 26px 16px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,.4); line-height: 1; white-space: nowrap; }
+    #h-flash { position: absolute; inset: 0; background: #fff; }
+  </style>
+  <div id="root" data-composition-id="hook" data-width="1080" data-height="1920">
+    <img id="h-bg" class="clip" src="assets/depan_bg.jpg" data-start="0" data-duration="2.5" alt="" />
+    <div id="h-frame-clip" class="clip" data-start="0" data-duration="2.5">
+      <div id="h-frame"><img id="h-img" src="assets/depan.jpg" alt="Rumah banglo reka bentuk AA Land" /></div>
+    </div>
+    <div id="h-g" class="clip h-row" data-start="0" data-duration="2.5">
+      <div id="h-a" class="h-word">NAK BINA</div>
+      <div id="h-b" class="h-box">RUMAH IDAMAN?</div>
+    </div>
+    <div id="h-flash" class="clip" data-start="2.3" data-duration="0.2"></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#h-img", { x: -180, scale: 1.12 }, { x: -420, scale: 1.0, duration: 2.5, ease: "power1.out" }, 0);
+    tl.fromTo("#h-bg", { scale: 1.1 }, { scale: 1.0, duration: 2.5, ease: "none" }, 0);
+    // frame 0 is the thumbnail: the question is already on screen
+    tl.fromTo("#h-a", { scale: 1.06 }, { scale: 1, duration: 0.4, ease: "power3.out" }, 0);
+    tl.fromTo("#h-b", { scale: 1.06, rotation: -3 }, { scale: 1, rotation: -2, duration: 0.4, ease: "power3.out" }, 0);
+    tl.to("#h-b", { scale: 1.07, duration: 0.25, ease: "power2.out", yoyo: true, repeat: 3 }, 0.5);
+    tl.fromTo("#h-flash", { opacity: 0 }, { opacity: 0.95, duration: 0.18, ease: "power2.in" }, 2.3);
+    window.__timelines["hook"] = tl;
+  </script>
+</template>

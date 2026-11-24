@@ -1,0 +1,44 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; overflow: hidden; background: #07120b; font-family: "Inter", sans-serif; }
+    #w-bg { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+    #w-tint { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,18,11,.55), rgba(7,18,11,.85)); }
+    .w-row { position: absolute; left: 120px; width: 660px; display: flex; justify-content: center; }
+    #w-title { color: #fff; font-weight: 900; font-size: 64px; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; }
+    #w-title b { color: #2ecc60; }
+    .w-item { position: absolute; left: 120px; display: flex; align-items: center; gap: 24px; }
+    .w-tick { position: relative; width: 84px; height: 84px; border-radius: 50%; background: #2ecc60; box-shadow: 0 10px 26px rgba(0,0,0,.4); flex: none; }
+    .w-tick i { position: absolute; left: 25px; top: 18px; width: 22px; height: 38px; border-right: 10px solid #07120b; border-bottom: 10px solid #07120b; transform: rotate(45deg); }
+    .w-text { color: #fff; font-weight: 900; font-size: 50px; line-height: 1.05; }
+    .w-text small { display: block; color: #ffd23f; font-weight: 700; font-size: 32px; margin-top: 6px; }
+  </style>
+  <div id="root" data-composition-id="why" data-width="1080" data-height="1920">
+    <img id="w-bg" class="clip" src="assets/cta_bg.jpg" data-start="0" data-duration="4" alt="" />
+    <div id="w-tint" class="clip" data-start="0" data-duration="4"></div>
+    <div id="w-r" class="clip w-row" data-start="0" data-duration="4" style="top: 320px">
+      <div id="w-title">KENAPA <b>AA LAND?</b></div>
+    </div>
+    <div id="w-1" class="clip w-item" data-start="0.4" data-duration="3.6" style="top: 520px">
+      <div id="w-1t" class="w-tick"><i></i></div>
+      <div id="w-1x" class="w-text">REKA BENTUK MODEN<small>Banglo setingkat bergaya</small></div>
+    </div>
+    <div id="w-2" class="clip w-item" data-start="1.4" data-duration="2.6" style="top: 700px">
+      <div id="w-2t" class="w-tick"><i></i></div>
+      <div id="w-2x" class="w-text">PELAN JELAS<small>Tahu susun atur sebelum bina</small></div>
+    </div>
+    <div id="w-3" class="clip w-item" data-start="2.4" data-duration="1.6" style="top: 880px">
+      <div id="w-3t" class="w-tick"><i></i></div>
+      <div id="w-3x" class="w-text">TANAH LUAS<small>Lot 5,000 kaki persegi</small></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#w-bg", { scale: 1.0 }, { scale: 1.08, duration: 4, ease: "none" }, 0);
+    tl.fromTo("#w-title", { y: -40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" }, 0);
+    [[1, 0.4], [2, 1.4], [3, 2.4]].forEach(([n, t]) => {
+      tl.fromTo(`#w-${n}t`, { scale: 0, rotation: -120 }, { scale: 1, rotation: 0, duration: 0.35, ease: "back.out(2.6)" }, t);
+      tl.fromTo(`#w-${n}x`, { x: 60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, t + 0.1);
+    });
+    window.__timelines["why"] = tl;
+  </script>
+</template>
