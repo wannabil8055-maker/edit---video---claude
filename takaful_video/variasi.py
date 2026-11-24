@@ -348,7 +348,7 @@ def render(t):
         img = Image.blend(bg, img, max(0.0, a))
     d = ImageDraw.Draw(img, "RGBA")
     d.rectangle((0, 0, X(W * t / total), X(10)), fill=col(TEAL))
-    if fn is not scene_agent:
+    if fn is not scene_agent and not getattr(fn, "no_pill", False):
         pill(d, 540, 36, f"{AGENT}  ·  {PHONE}", F("b", 36), TEAL_D, WHITE, 0.9, padx=34, h=76)
     return img.reduce(S)
 
