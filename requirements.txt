@@ -1,0 +1,2 @@
+faster-whisper==1.2.1
+av<17  # av 17+ breaks faster-whisper 1.2.1 (metadata_errors arg)
