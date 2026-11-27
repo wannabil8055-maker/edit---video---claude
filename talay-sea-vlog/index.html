@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ms" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1920">
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Anton"; src: url("assets/fonts/anton-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/poppins-latin-500-normal.woff2") format("woff2"); font-weight: 500; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/poppins-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/poppins-latin-800-normal.woff2") format("woff2"); font-weight: 800; }
+      @font-face { font-family: "Poppins"; src: url("assets/fonts/poppins-latin-900-normal.woff2") format("woff2"); font-weight: 900; }
+      @font-face { font-family: "Noto Color Emoji"; src: url("assets/fonts/NotoColorEmoji.ttf") format("truetype"); }
+      @font-face { font-family: "Pacifico"; src: url("assets/fonts/pacifico-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+
+      :root {
+        --ground: #06222e;
+        --ink: #ffffff;
+        --sea: #2ec4d6;
+        --sand: #ffd98a;
+        --coral: #ff6b4a;
+        --navy: #06222e;
+        --font-display: "Anton", "Noto Color Emoji", sans-serif;
+        --font-body: "Poppins", "Noto Color Emoji", sans-serif;
+        --font-script: "Pacifico", "Noto Color Emoji", cursive;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1080px; height: 1920px; overflow: hidden;
+        background: var(--ground);
+      }
+      #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: var(--font-body); }
+
+      .clip { position: absolute; inset: 0; width: 1080px; height: 1920px; }
+      video.clip, img.clip { object-fit: cover; transform-origin: 50% 50%; }
+      .layer { pointer-events: none; }
+
+      /* readability gradients */
+      .shade-top { position: absolute; left: 0; right: 0; top: 0; height: 520px;
+        background: linear-gradient(180deg, rgba(4,20,28,.55) 0%, rgba(4,20,28,0) 100%); }
+      .shade-bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 900px;
+        background: linear-gradient(0deg, rgba(4,20,28,.72) 0%, rgba(4,20,28,.35) 45%, rgba(4,20,28,0) 100%); }
+
+      /* ---------- HOOK ---------- */
+      .hook-wrap { position: absolute; left: 120px; right: 120px; top: 360px; text-align: center; }
+      .kicker { display: inline-block; font-family: var(--font-body); font-weight: 900; font-size: 44px;
+        letter-spacing: .02em; color: var(--navy); background: var(--sand); padding: 14px 30px; border-radius: 999px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+      .hook-line { display: block; font-family: var(--font-display); color: #fff; text-transform: uppercase;
+        line-height: .98; letter-spacing: .01em; text-shadow: 0 8px 0 rgba(0,0,0,.25), 0 14px 40px rgba(0,0,0,.55); }
+      .hook-l1 { font-size: 140px; }
+      .hook-l2 { font-size: 150px; color: var(--sand); }
+      .hook-l3 { font-size: 104px; }
+      .hook-sub { margin-top: 44px; font-weight: 700; font-size: 46px; color: #fff;
+        text-shadow: 0 4px 18px rgba(0,0,0,.7); }
+
+      /* ---------- TITLE ---------- */
+      .title-wrap { position: absolute; left: 120px; right: 120px; top: 330px; text-align: center; }
+      .brand { font-family: var(--font-script); font-size: 140px; color: #fff; line-height: 1.45;
+        text-shadow: 0 6px 0 rgba(17,90,120,.55), 0 16px 50px rgba(0,0,0,.6); }
+      .brand-tag { margin-top: 28px; font-weight: 700; font-size: 44px; color: #fff; font-style: italic;
+        text-shadow: 0 4px 16px rgba(0,0,0,.8); }
+      .brand-rule { width: 0; height: 8px; margin: 26px auto 0; border-radius: 8px; background: var(--sea); }
+
+      /* ---------- CHAPTER CHIP ---------- */
+      .chip { position: absolute; left: 120px; top: 310px; display: flex; align-items: center; gap: 18px;
+        background: rgba(6,34,46,.78); border: 3px solid rgba(255,255,255,.18); border-radius: 22px; padding: 16px 28px 16px 18px; }
+      .chip-num { font-family: var(--font-display); font-size: 42px; color: var(--navy); background: var(--sea);
+        border-radius: 14px; padding: 2px 16px; line-height: 1.15; }
+      .chip-txt { font-weight: 800; font-size: 34px; letter-spacing: .08em; color: #fff; text-transform: uppercase; }
+
+      /* ---------- CAPTIONS ---------- */
+      .cap { position: absolute; left: 120px; width: 660px; bottom: 710px; text-align: left; }
+      .cap-line { display: inline-block; font-weight: 900; font-size: 62px; line-height: 1.12; color: #fff;
+        text-shadow: 0 5px 0 rgba(0,0,0,.35), 0 10px 34px rgba(0,0,0,.7); }
+      .cap-hl { color: var(--sand); }
+      .cap-pill { display: inline-block; transform-origin: 0 50%; margin-top: 18px; font-weight: 800; font-size: 42px; color: var(--navy);
+        background: #fff; padding: 10px 28px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+
+      /* ---------- OUTRO ---------- */
+      .outro-wrap { position: absolute; left: 120px; width: 660px; top: 330px; text-align: left; }
+      .outro-brand { font-family: var(--font-script); font-size: 132px; color: #fff; line-height: 1.45;
+        text-shadow: 0 6px 0 rgba(17,90,120,.55), 0 16px 50px rgba(0,0,0,.6); }
+      .outro-tag { font-weight: 700; font-style: italic; font-size: 44px; line-height: 1.3; color: #fff; margin-top: 24px;
+        text-shadow: 0 4px 16px rgba(0,0,0,.8); }
+      .cta { display: block; width: fit-content; margin: 26px 0 0; font-weight: 900; font-size: 40px; transform-origin: 0 50%;
+        padding: 18px 40px; border-radius: 999px; box-shadow: 0 12px 34px rgba(0,0,0,.4); }
+      .cta-a { background: var(--sand); color: var(--navy); margin-top: 120px; }
+      .cta-b { background: #fff; color: var(--navy); }
+
+      /* ---------- FX ---------- */
+      #flash { position: absolute; inset: 0; background: #fff; opacity: 0; z-index: 50; }
+      #progress-track { position: absolute; left: 0; right: 0; top: 0; height: 12px; background: rgba(255,255,255,.18); z-index: 60; }
+      #progress { position: absolute; left: 0; top: 0; height: 12px; width: 1080px; background: linear-gradient(90deg, var(--sea), var(--sand));
+        transform-origin: 0 50%; transform: scaleX(0); }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-nqst" id="root" data-composition-id="main" data-start="0" data-duration="27" data-width="1080" data-height="1920">
+
+      <!-- ===================== FOOTAGE (track 0) ===================== -->
+      <!-- HOOK: payoff shot first — walking down the white-stone path to the beach -->
+      <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-dx4g" id="v-hook" class="clip" src="assets/media/c4_path.mp4" data-start="0" data-duration="2.4" data-media-start="2.4" data-volume="0.45" data-track-index="0" data-has-audio="true" playsinline></video>
+      <!-- Title: exterior pan -->
+      <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-skft" id="v-ext" class="clip" src="assets/media/c1_exterior.mp4" data-start="2.4" data-duration="1.8" data-media-start="0.1" data-volume="0.4" data-track-index="0" data-has-audio="true" playsinline></video>
+      <!-- Photo burst, one per beat -->
+      <img data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-agkz" id="p-wide" class="clip" src="assets/media/p2_wide.jpg" data-start="4.2" data-duration="0.6" data-track-index="0" alt="">
+      <img data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-j57q" id="p-side" class="clip" src="assets/media/p3_side.jpg" data-start="4.8" data-duration="0.6" data-track-index="0" alt="">
+      <img data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-yi4n" id="p-front" class="clip" src="assets/media/p1_front.jpg" data-start="5.4" data-duration="0.6" data-track-index="0" alt="">
+      <!-- 01 walk in past the open kitchen -->
+      <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-creg" id="v-kitchen" class="clip" src="assets/media/c2_kitchen.mp4" data-start="6.0" data-duration="3.6" data-media-start="1.0" data-volume="0.3" data-track-index="0" data-has-audio="true" playsinline></video>
+      <!-- 02 dining hall -->
+      <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-p3si" id="v-dining" class="clip" src="assets/media/c3_dining.mp4" data-start="9.6" data-duration="3.6" data-media-start="0" data-volume="0.4" data-track-index="0" data-has-audio="true" playsinline></video>
+      <!-- 03 stone path -->
+      <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-ejp4" id="v-path" class="clip" src="assets/media/c4_path.mp4" data-start="13.2" data-duration="2.4" data-media-start="0" data-volume="0.45" data-track-index="0" data-has-audio="true" playsinline></video>
+      <!-- 04 beach huts -->
+      <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-fwwz" id="v-huts" class="clip" src="assets/media/c5_huts.mp4" data-start="15.6" data-duration="3.6" data-media-start="0.9" data-volume="0.45" data-track-index="0" data-has-audio="true" playsinline></video>
+      <!-- sea view -->
+      <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-39zn" id="v-view" class="clip" src="assets/media/c3_dining.mp4" data-start="19.2" data-duration="2.6" data-media-start="3.4" data-volume="0.4" data-track-index="0" data-has-audio="true" playsinline></video>
+      <!-- from the sand, looking back -->
+      <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-f5ha" id="v-back" class="clip" src="assets/media/c6_beachback.mp4" data-start="21.8" data-duration="2.19" data-media-start="0" data-volume="0.45" data-track-index="0" data-has-audio="true" playsinline></video>
+      <!-- outro still -->
+      <img data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0,&quot;contrast&quot;:0.1,&quot;highlights&quot;:-0.25,&quot;shadows&quot;:0.08,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0.07,&quot;tint&quot;:0,&quot;vibrance&quot;:0.32,&quot;saturation&quot;:0.06},&quot;details&quot;:{&quot;vignette&quot;:0.18,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-6hul" id="p-outro" class="clip" src="assets/media/p1_front.jpg" data-start="23.99" data-duration="3.01" data-track-index="0" alt="">
+
+      <!-- ===================== MUSIC ===================== -->
+      <audio data-hf-id="hf-omfj" id="music" src="assets/audio/music.wav" data-start="0" data-duration="27" data-volume="0.85" data-fade-out="1.2" data-track-index="9"></audio>
+
+      <!-- ===================== OVERLAYS ===================== -->
+      <!-- HOOK -->
+      <div data-hf-id="hf-ua6v" id="o-hook" class="clip layer" data-start="0" data-duration="2.4" data-track-index="1">
+        <div data-hf-id="hf-y6v4" class="shade-top" style="height:1300px;background:linear-gradient(180deg,rgba(4,20,28,.62) 0%,rgba(4,20,28,.35) 60%,rgba(4,20,28,0) 100%)"></div>
+        <div data-hf-id="hf-wghq" class="hook-wrap">
+          <span data-hf-id="hf-cnh1" id="hk-1" class="hook-line hook-l1">MAKAN</span>
+          <span data-hf-id="hf-qv0b" id="hk-2" class="hook-line hook-l2">DEPAN LAUT</span>
+          <span data-hf-id="hf-kr9b" id="hk-3" class="hook-line hook-l3">SECANTIK INI?!</span>
+        </div>
+      </div>
+
+      <!-- TITLE -->
+      <div data-hf-id="hf-4p6d" id="o-title" class="clip layer" data-start="2.4" data-duration="1.8" data-track-index="1">
+        <div data-hf-id="hf-qxnl" class="shade-top" style="height:900px"></div>
+        <div data-hf-id="hf-mdff" class="title-wrap">
+          <div data-hf-id="hf-jnzv" id="tt-brand" class="brand">Talay Sea</div>
+          <div data-hf-id="hf-6kvf" id="tt-rule" class="brand-rule"></div>
+          <div data-hf-id="hf-wq0e" id="tt-tag" class="brand-tag">📍 Restoran tepi pantai</div>
+        </div>
+      </div>
+
+      <!-- PHOTO BURST caption -->
+      <div data-hf-id="hf-tkhe" id="o-photos" class="clip layer" data-start="4.2" data-duration="1.8" data-track-index="1">
+        <div data-hf-id="hf-hyh9" class="shade-bottom"></div>
+        <div data-hf-id="hf-2mgg" class="cap">
+          <span data-hf-id="hf-oasq" id="ph-1" class="cap-line">Konsep <span data-hf-id="hf-77nx" class="cap-hl">putih + kayu</span></span><br data-hf-id="hf-x5px">
+          <span data-hf-id="hf-zteh" id="ph-2" class="cap-pill">vibe resort tropika 🌴</span>
+        </div>
+      </div>
+
+      <!-- 01 KITCHEN -->
+      <div data-hf-id="hf-vhdj" id="o-kitchen" class="clip layer" data-start="6.0" data-duration="3.6" data-track-index="1">
+        <div data-hf-id="hf-peth" class="shade-top"></div><div data-hf-id="hf-c1dt" class="shade-bottom"></div>
+        <div data-hf-id="hf-jikn" id="ch-1" class="chip"><span data-hf-id="hf-5gor" class="chip-num">01</span><span data-hf-id="hf-gb5f" class="chip-txt">Masuk</span></div>
+        <div data-hf-id="hf-xclk" class="cap">
+          <span data-hf-id="hf-adyx" id="kt-1" class="cap-line">Lalu tepi dapur terbuka…</span><br data-hf-id="hf-rsrt">
+          <span data-hf-id="hf-ur7v" id="kt-2" class="cap-pill">terus nampak laut! 😍</span>
+        </div>
+      </div>
+
+      <!-- 02 DINING -->
+      <div data-hf-id="hf-63o5" id="o-dining" class="clip layer" data-start="9.6" data-duration="3.6" data-track-index="1">
+        <div data-hf-id="hf-5i1l" class="shade-top"></div><div data-hf-id="hf-d8aw" class="shade-bottom"></div>
+        <div data-hf-id="hf-8n30" id="ch-2" class="chip"><span data-hf-id="hf-52dq" class="chip-num">02</span><span data-hf-id="hf-zchj" class="chip-txt">Ruang makan</span></div>
+        <div data-hf-id="hf-w5oh" class="cap">
+          <span data-hf-id="hf-6nz1" id="dn-1" class="cap-line">Luas, redup &amp; <span data-hf-id="hf-z1ae" class="cap-hl">sentiasa penuh</span></span><br data-hf-id="hf-szow">
+          <span data-hf-id="hf-f37j" id="dn-2" class="cap-pill">angin laut sepoi-sepoi 🌬️</span>
+        </div>
+      </div>
+
+      <!-- 03 PATH -->
+      <div data-hf-id="hf-5jo9" id="o-path" class="clip layer" data-start="13.2" data-duration="2.4" data-track-index="1">
+        <div data-hf-id="hf-6oyo" class="shade-top"></div><div data-hf-id="hf-ctzv" class="shade-bottom"></div>
+        <div data-hf-id="hf-9eqt" id="ch-3" class="chip"><span data-hf-id="hf-4o2p" class="chip-num">03</span><span data-hf-id="hf-3bc2" class="chip-txt">Laluan pantai</span></div>
+        <div data-hf-id="hf-wjzi" class="cap">
+          <span data-hf-id="hf-rgqw" id="pt-1" class="cap-line">Laluan batu putih <span data-hf-id="hf-41od" class="cap-hl">super aesthetic</span> 📸</span>
+        </div>
+      </div>
+
+      <!-- 04 HUTS -->
+      <div data-hf-id="hf-q78p" id="o-huts" class="clip layer" data-start="15.6" data-duration="3.6" data-track-index="1">
+        <div data-hf-id="hf-6ann" class="shade-top"></div><div data-hf-id="hf-augq" class="shade-bottom"></div>
+        <div data-hf-id="hf-s6gi" id="ch-4" class="chip"><span data-hf-id="hf-49ro" class="chip-num">04</span><span data-hf-id="hf-vw4g" class="chip-txt">Pondok pantai</span></div>
+        <div data-hf-id="hf-vd2f" class="cap">
+          <span data-hf-id="hf-zyxa" id="ht-1" class="cap-line">Makan dalam pondok <span data-hf-id="hf-vd66" class="cap-hl">atas pasir</span> 🏝️</span><br data-hf-id="hf-sldv">
+          <span data-hf-id="hf-culk" id="ht-2" class="cap-pill">sesuai bawa family 👨‍👩‍👧</span>
+        </div>
+      </div>
+
+      <!-- VIEW -->
+      <div data-hf-id="hf-f5un" id="o-view" class="clip layer" data-start="19.2" data-duration="2.6" data-track-index="1">
+        <div data-hf-id="hf-ag5p" class="shade-bottom"></div>
+        <div data-hf-id="hf-vrdg" class="cap">
+          <span data-hf-id="hf-hgr4" id="vw-1" class="cap-line">View laut <span data-hf-id="hf-33cl" class="cap-hl">percuma</span></span><br data-hf-id="hf-qluq">
+          <span data-hf-id="hf-oodd" id="vw-2" class="cap-pill">terus depan mata 🌊</span>
+        </div>
+      </div>
+
+      <!-- BACK -->
+      <div data-hf-id="hf-gj8s" id="o-back" class="clip layer" data-start="21.8" data-duration="2.2" data-track-index="1">
+        <div data-hf-id="hf-bn2s" class="shade-bottom"></div>
+        <div data-hf-id="hf-ukgd" class="cap">
+          <span data-hf-id="hf-76i9" id="bk-1" class="cap-line">Dari pantai pun <span data-hf-id="hf-ymcs" class="cap-hl">nampak gah</span> ✨</span>
+        </div>
+      </div>
+
+      <!-- OUTRO -->
+      <div data-hf-id="hf-t780" id="o-outro" class="clip layer" data-start="24.0" data-duration="3.0" data-track-index="1">
+        <div data-hf-id="hf-fe6s" style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,20,28,.75) 0%,rgba(4,20,28,.55) 55%,rgba(4,20,28,.3) 100%)"></div>
+        <div data-hf-id="hf-qq1q" class="outro-wrap">
+          <div data-hf-id="hf-5zb1" id="ou-brand" class="outro-brand">Talay Sea</div>
+          <div data-hf-id="hf-ungv" id="ou-tag" class="outro-tag">Datang sebagai tetamu,<br data-hf-id="hf-q7jp">pulang sebagai sahabat</div>
+          <span data-hf-id="hf-dxun" id="ou-a" class="cta cta-a">🔖 Save untuk trip nanti</span>
+          <span data-hf-id="hf-0cpu" id="ou-b" class="cta cta-b">Tag geng makan korang 👇</span>
+        </div>
+      </div>
+
+      <!-- FX -->
+      <div data-hf-id="hf-scnw" id="fx" class="clip layer" data-start="0" data-duration="27" data-track-index="2">
+        <div data-hf-id="hf-hmg5" id="flash"></div>
+        <div data-hf-id="hf-o48q" id="progress-track"><div data-hf-id="hf-o6ww" id="progress"></div></div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const BEAT = 0.6;
+
+      // ---------- global: progress bar ----------
+      tl.fromTo("#progress", { scaleX: 0 }, { scaleX: 1, duration: 27, ease: "none" }, 0);
+
+      // ---------- footage motion: zoom-punch in on each cut, then slow drift ----------
+      const shots = [
+        ["#v-hook", 0, 2.4, 1.18, 1.06],
+        ["#v-ext", 2.4, 1.8, 1.22, 1.08],
+        ["#p-wide", 4.2, 0.6, 1.2, 1.1],
+        ["#p-side", 4.8, 0.6, 1.2, 1.1],
+        ["#p-front", 5.4, 0.6, 1.2, 1.1],
+        ["#v-kitchen", 6.0, 3.6, 1.14, 1.03],
+        ["#v-dining", 9.6, 3.6, 1.14, 1.03],
+        ["#v-path", 13.2, 2.4, 1.14, 1.04],
+        ["#v-huts", 15.6, 3.6, 1.14, 1.03],
+        ["#v-view", 19.2, 2.6, 1.14, 1.04],
+        ["#v-back", 21.8, 2.19, 1.14, 1.04],
+        ["#p-outro", 23.99, 3.01, 1.04, 1.16],
+      ];
+      shots.forEach(([sel, t, d, s0, s1]) => {
+        tl.fromTo(sel, { scale: s0 }, { scale: s1, duration: d, ease: "power2.out" }, t);
+      });
+
+      // ---------- white flash on every cut ----------
+      [2.4, 4.2, 4.8, 5.4, 6.0, 9.6, 13.2, 15.6, 19.2, 21.8, 24.0].forEach((t, i) => {
+        const peak = t === 2.4 || t === 24.0 ? 0.9 : 0.45;
+        tl.fromTo("#flash", { opacity: peak }, { opacity: 0, duration: t === 2.4 ? 0.35 : 0.18, ease: "power2.out", immediateRender: false }, t);
+      });
+
+      // ---------- HOOK (words land on beats) ----------
+      tl.fromTo("#hk-1", { y: 80, opacity: 0 }, { y: 0, opacity: 1, duration: 0.28, ease: "power3.out" }, 0.1);
+      tl.fromTo("#hk-2", { scale: 1.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, ease: "back.out(1.8)" }, 0.6);
+      tl.fromTo("#hk-3", { y: 80, opacity: 0 }, { y: 0, opacity: 1, duration: 0.28, ease: "power3.out" }, 1.2);
+      tl.to("#hk-2", { scale: 1.06, duration: 0.12, yoyo: true, repeat: 1, ease: "power1.inOut" }, 1.8);
+
+      // ---------- TITLE ----------
+      tl.fromTo("#tt-brand", { scale: 0.6, opacity: 0, y: 40 }, { scale: 1, opacity: 1, y: 0, duration: 0.45, ease: "back.out(1.7)" }, 2.45);
+      tl.fromTo("#tt-rule", { width: 0 }, { width: 360, duration: 0.4, ease: "power3.out" }, 2.6);
+      tl.fromTo("#tt-tag", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 2.7);
+
+      // ---------- caption helper ----------
+      const LINE_FROM = { y: 60, opacity: 0 }, LINE_TO = { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" };
+      const PILL_FROM = { scale: 0.5, opacity: 0, rotation: -4 }, PILL_TO = { scale: 1, opacity: 1, rotation: -2, duration: 0.32, ease: "back.out(2.4)" };
+      const lineIn = (sel, t) => tl.fromTo(sel, { ...LINE_FROM }, { ...LINE_TO }, t);
+      const pillIn = (sel, t) => tl.fromTo(sel, { ...PILL_FROM }, { ...PILL_TO }, t);
+      function chipIn(sel, t) {
+        tl.fromTo(sel, { x: -260, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: "power3.out" }, t);
+      }
+
+      lineIn("#ph-1", 4.25);  pillIn("#ph-2", 4.85);
+      chipIn("#ch-1", 6.05); lineIn("#kt-1", 6.2); pillIn("#kt-2", 7.8);
+      chipIn("#ch-2", 9.65); lineIn("#dn-1", 9.8); pillIn("#dn-2", 11.4);
+      chipIn("#ch-3", 13.25); lineIn("#pt-1", 13.4);
+      chipIn("#ch-4", 15.65); lineIn("#ht-1", 15.8); pillIn("#ht-2", 17.4);
+      lineIn("#vw-1", 19.3); pillIn("#vw-2", 19.9);
+      lineIn("#bk-1", 21.9);
+
+      // ---------- OUTRO ----------
+      tl.fromTo("#ou-brand", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.45, ease: "back.out(1.7)" }, 24.05);
+      tl.fromTo("#ou-tag", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3 }, 24.3);
+      tl.fromTo("#ou-a", { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.32, ease: "back.out(2.2)" }, 24.55);
+      tl.fromTo("#ou-b", { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.32, ease: "back.out(2.2)" }, 24.85);
+      tl.to("#ou-a", { scale: 1.06, duration: 0.15, yoyo: true, repeat: 1 }, 25.8);
+      tl.to("#ou-b", { scale: 1.06, duration: 0.15, yoyo: true, repeat: 1 }, 26.2);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
